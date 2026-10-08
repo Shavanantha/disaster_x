@@ -1,8 +1,8 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
+import 'package:video_player/video_player.dart';
 import '../../models/simulasi_model.dart';
 import '../../services/storage_service.dart';
-import '../../widgets/icon_helper.dart';
 
 class InteractiveSimulationScreen extends StatefulWidget {
   final SkenarioSimulasi skenario;
@@ -16,7 +16,7 @@ class InteractiveSimulationScreen extends StatefulWidget {
   State<InteractiveSimulationScreen> createState() => _InteractiveSimulationScreenState();
 }
 
-class _InteractiveSimulationScreenState extends State<InteractiveSimulationScreen> {
+class _InteractiveSimulationScreenState extends State<InteractiveSimulationScreen> with TickerProviderStateMixin {
   late int _totalSeconds;
   int _currentSeconds = 0;
   Timer? _timer;
@@ -24,13 +24,38 @@ class _InteractiveSimulationScreenState extends State<InteractiveSimulationScree
   int _safetyScore = 50; // Skor awal
   final List<String> _eventLogs = [];
   final Set<int> _triggeredCheckpoints = {};
-  bool _isFinished = false;
+
+  // Mode Tampilan: Animasi Interaktif (Canvas) vs Video Player MP4
+  bool _useVideoPlayerMode = false;
+  VideoPlayerController? _videoController;
+
+  // Animasi Controller untuk efek visual simulasi
+  late AnimationController _shakeAnimController; // Efek guncangan gempa
+  late AnimationController _pulseAnimController; // Efek kedip sirine darurat
+  late AnimationController _waveAnimController;  // Efek ombak air banjir
 
   @override
   void initState() {
     super.initState();
     _totalSeconds = widget.skenario.totalDetik;
     _eventLogs.add(widget.skenario.prolog);
+
+    // Inisialisasi controller animasi
+    _shakeAnimController = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 100),
+    );
+
+    _pulseAnimController = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 600),
+    )..repeat(reverse: true);
+
+    _waveAnimController = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 1500),
+    )..repeat();
+
     _startSimulation();
   }
 
@@ -39,16 +64,32 @@ class _InteractiveSimulationScreenState extends State<InteractiveSimulationScree
       _isPlaying = true;
     });
 
+    if (widget.skenario.id == 'gempa_kelas' && _currentSeconds >= 12 && _currentSeconds < 32) {
+      _shakeAnimController.repeat(reverse: true);
+    }
+
     _timer = Timer.periodic(const Duration(seconds: 1), (timer) {
       if (_currentSeconds >= _totalSeconds) {
         _timer?.cancel();
+        _shakeAnimController.stop();
         _onSimulationCompleted();
       } else {
         setState(() {
           _currentSeconds++;
         });
 
-        // Cek apakah detik ini memicu checkpoint
+        // Trigger animasi gempa saat gempa aktif
+        if (widget.skenario.id == 'gempa_kelas') {
+          if (_currentSeconds >= 12 && _currentSeconds <= 30) {
+            if (!_shakeAnimController.isAnimating) {
+              _shakeAnimController.repeat(reverse: true);
+            }
+          } else {
+            _shakeAnimController.stop();
+          }
+        }
+
+        // Cek checkpoint
         for (final cp in widget.skenario.checkpoints) {
           if (_currentSeconds == cp.detik && !_triggeredCheckpoints.contains(cp.detik)) {
             _triggeredCheckpoints.add(cp.detik);
@@ -62,12 +103,14 @@ class _InteractiveSimulationScreenState extends State<InteractiveSimulationScree
 
   void _pauseAndTriggerCheckpoint(SimulasiCheckpoint checkpoint) {
     _timer?.cancel();
+    _shakeAnimController.stop();
+    _videoController?.pause();
+
     setState(() {
       _isPlaying = false;
-      _eventLogs.insert(0, '⚠️ [PERINGATAN]: ${checkpoint.narasiSituasi}');
+      _eventLogs.insert(0, '⚠️ [CHECKPOINT TERCAPAI]: ${checkpoint.narasiSituasi}');
     });
 
-    // Buka modal keputusan
     _showDecisionBottomSheet(checkpoint);
   }
 
@@ -76,34 +119,19 @@ class _InteractiveSimulationScreenState extends State<InteractiveSimulationScree
       _isPlaying = true;
     });
 
-    _timer = Timer.periodic(const Duration(seconds: 1), (timer) {
-      if (_currentSeconds >= _totalSeconds) {
-        _timer?.cancel();
-        _onSimulationCompleted();
-      } else {
-        setState(() {
-          _currentSeconds++;
-        });
+    if (_useVideoPlayerMode && _videoController != null && _videoController!.value.isInitialized) {
+      _videoController?.play();
+    }
 
-        for (final cp in widget.skenario.checkpoints) {
-          if (_currentSeconds == cp.detik && !_triggeredCheckpoints.contains(cp.detik)) {
-            _triggeredCheckpoints.add(cp.detik);
-            _pauseAndTriggerCheckpoint(cp);
-            break;
-          }
-        }
-      }
-    });
+    _startSimulation();
   }
 
   Future<void> _onSimulationCompleted() async {
     setState(() {
       _isPlaying = false;
-      _isFinished = true;
       _eventLogs.insert(0, '🎉 ${widget.skenario.pesanSelesai}');
     });
 
-    // Simpan ke storage
     await StorageService.saveSimulationScore(widget.skenario.id, _safetyScore);
 
     if (!mounted) return;
@@ -287,12 +315,14 @@ class _InteractiveSimulationScreenState extends State<InteractiveSimulationScree
               ),
               const SizedBox(height: 16),
               Text(
-                isPassed ? 'Simulasi Berhasil!' : 'Evaluasi Diperlukan',
+                isPassed ? 'Simulasi Berhasil Diselesaikan!' : 'Evaluasi Kesiapsiagaan',
                 style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
               ),
               const SizedBox(height: 6),
               Text(
-                isPassed ? 'Kamu berhasil mengambil keputusan mitigasi darurat dengan baik!' : 'Tingkat keselamatan masih di bawah batas aman (60%). Coba pelajari materi dan ulangi lagi.',
+                isPassed
+                    ? 'Luar biasa! Keputusan keselamatan yang kamu ambil tepat sasaran dan mengurangi risiko bencana.'
+                    : 'Skor keselamatan di bawah batas aman (60%). Jangan panik, pelajari kembali modul materi dan coba lagi.',
                 textAlign: TextAlign.center,
                 style: const TextStyle(fontSize: 12, color: Colors.grey, height: 1.3),
               ),
@@ -305,7 +335,7 @@ class _InteractiveSimulationScreenState extends State<InteractiveSimulationScree
                 ),
                 child: Column(
                   children: [
-                    const Text('Skor Keselamatan Akhir', style: TextStyle(fontSize: 12, color: Colors.grey)),
+                    const Text('Safety Readiness Score Akhir', style: TextStyle(fontSize: 12, color: Colors.grey)),
                     const SizedBox(height: 4),
                     Text(
                       '$_safetyScore / 100',
@@ -324,18 +354,16 @@ class _InteractiveSimulationScreenState extends State<InteractiveSimulationScree
             TextButton(
               onPressed: () {
                 Navigator.pop(ctx);
-                // Restart simulasi
                 setState(() {
                   _currentSeconds = 0;
                   _safetyScore = 50;
                   _triggeredCheckpoints.clear();
                   _eventLogs.clear();
                   _eventLogs.add(widget.skenario.prolog);
-                  _isFinished = false;
                 });
                 _startSimulation();
               },
-              child: const Text('Coba Lagi'),
+              child: const Text('Ulangi Simulasi'),
             ),
             ElevatedButton(
               style: ElevatedButton.styleFrom(
@@ -347,7 +375,7 @@ class _InteractiveSimulationScreenState extends State<InteractiveSimulationScree
                 Navigator.pop(ctx);
                 Navigator.pop(context);
               },
-              child: const Text('Kembali ke Menu'),
+              child: const Text('Selesai & Keluar'),
             ),
           ],
         );
@@ -358,6 +386,10 @@ class _InteractiveSimulationScreenState extends State<InteractiveSimulationScree
   @override
   void dispose() {
     _timer?.cancel();
+    _shakeAnimController.dispose();
+    _pulseAnimController.dispose();
+    _waveAnimController.dispose();
+    _videoController?.dispose();
     super.dispose();
   }
 
@@ -366,16 +398,37 @@ class _InteractiveSimulationScreenState extends State<InteractiveSimulationScree
     final themeColor = Color(widget.skenario.warnaHex);
 
     return Scaffold(
-      backgroundColor: const Color(0xFF1E1E2C),
+      backgroundColor: const Color(0xFF161622),
       appBar: AppBar(
         title: Text(widget.skenario.judul, style: const TextStyle(fontSize: 14, fontWeight: FontWeight.bold)),
-        backgroundColor: const Color(0xFF1E1E2C),
+        backgroundColor: const Color(0xFF161622),
         foregroundColor: Colors.white,
         elevation: 0,
+        actions: [
+          // Switch mode antara Animasi Canvas Interaktif dan Video Player MP4
+          TextButton.icon(
+            style: TextButton.styleFrom(foregroundColor: Colors.white70),
+            icon: Icon(_useVideoPlayerMode ? Icons.animation_rounded : Icons.videocam_rounded, size: 18),
+            label: Text(_useVideoPlayerMode ? 'Animasi Canvas' : 'Video MP4', style: const TextStyle(fontSize: 11)),
+            onPressed: () {
+              setState(() {
+                _useVideoPlayerMode = !_useVideoPlayerMode;
+              });
+              if (_useVideoPlayerMode && _videoController == null) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(
+                    content: Text('Mode Video MP4 aktif. Jika belum ada file mp4 lokal, kanvas simulasi animasi tetap menjadi acuan visual.'),
+                    duration: Duration(seconds: 2),
+                  ),
+                );
+              }
+            },
+          ),
+        ],
       ),
       body: Column(
         children: [
-          // Area Visual Simulasi Interaktif
+          // ================= VIEWPORT ANIMASI INTERAKTIF =================
           Expanded(
             flex: 5,
             child: Container(
@@ -384,33 +437,8 @@ class _InteractiveSimulationScreenState extends State<InteractiveSimulationScree
               child: Stack(
                 alignment: Alignment.center,
                 children: [
-                  // Ilustrasi Skenario
-                  Column(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      Icon(
-                        getDisasterIcon(widget.skenario.iconCode),
-                        size: 88,
-                        color: _currentSeconds >= 12 ? Colors.amber : Colors.white54,
-                      ),
-                      const SizedBox(height: 12),
-                      Text(
-                        _isFinished
-                            ? 'SIMULASI SELESAI'
-                            : (_currentSeconds >= 12 ? '⚠️ TAHAP DARURAT BERJALAN ⚠️' : 'Situasi Normal / Deteksi Awal'),
-                        style: TextStyle(
-                          color: _currentSeconds >= 12 ? Colors.amber : Colors.white70,
-                          fontWeight: FontWeight.bold,
-                          fontSize: 16,
-                        ),
-                      ),
-                      const SizedBox(height: 6),
-                      Text(
-                        'Waktu Simulasi: 00:${_currentSeconds.toString().padLeft(2, '0')} / 00:$_totalSeconds',
-                        style: const TextStyle(color: Colors.white60, fontSize: 12),
-                      ),
-                    ],
-                  ),
+                  // Kanvas Animasi Grafis Dinamis Berdasarkan Bencana
+                  _buildAnimatedCanvas(),
 
                   // Badge Live / Status Auto-Pause
                   Positioned(
@@ -423,20 +451,20 @@ class _InteractiveSimulationScreenState extends State<InteractiveSimulationScree
                         borderRadius: BorderRadius.circular(6),
                       ),
                       child: Text(
-                        _isPlaying ? 'SIMULASI AKTIF' : 'PAUSED (CHECKPOINT)',
+                        _isPlaying ? 'ANIMASI AKTIF (PLAYING)' : 'PAUSED (AUTO-CHECKPOINT)',
                         style: const TextStyle(color: Colors.white, fontSize: 10, fontWeight: FontWeight.bold),
                       ),
                     ),
                   ),
 
-                  // Safety Score Badge
+                  // Floating Safety Score
                   Positioned(
                     top: 16,
                     right: 16,
                     child: Container(
                       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
                       decoration: BoxDecoration(
-                        color: Colors.black.withValues(alpha: 0.6),
+                        color: Colors.black.withValues(alpha: 0.65),
                         borderRadius: BorderRadius.circular(20),
                         border: Border.all(color: Colors.white24),
                       ),
@@ -461,7 +489,7 @@ class _InteractiveSimulationScreenState extends State<InteractiveSimulationScree
             ),
           ),
 
-          // Area Log Kejadian & Kontrol
+          // ================= AREA LOG KEJADIAN & KONTROL =================
           Expanded(
             flex: 5,
             child: Container(
@@ -476,13 +504,23 @@ class _InteractiveSimulationScreenState extends State<InteractiveSimulationScree
                   Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
-                      const Text('Catatan & Riwayat Kejadian', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14)),
-                      Text('${widget.skenario.checkpoints.length} Checkpoints', style: const TextStyle(fontSize: 11, color: Colors.grey)),
+                      const Text('Catatan & Status Kejadian', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14)),
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                        decoration: BoxDecoration(
+                          color: Colors.redAccent.withValues(alpha: 0.1),
+                          borderRadius: BorderRadius.circular(6),
+                        ),
+                        child: Text(
+                          'Detik 00:${_currentSeconds.toString().padLeft(2, '0')} / 00:$_totalSeconds',
+                          style: const TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: Colors.redAccent),
+                        ),
+                      ),
                     ],
                   ),
                   const SizedBox(height: 8),
 
-                  // Daftar Log Kejadian
+                  // Daftar Log Kejadian Skenario
                   Expanded(
                     child: ListView.builder(
                       itemCount: _eventLogs.length,
@@ -517,7 +555,7 @@ class _InteractiveSimulationScreenState extends State<InteractiveSimulationScree
                   ),
                   const SizedBox(height: 14),
 
-                  // Tombol Keluar
+                  // Tombol Keluar dari Simulasi
                   SizedBox(
                     width: double.infinity,
                     height: 44,
@@ -541,6 +579,212 @@ class _InteractiveSimulationScreenState extends State<InteractiveSimulationScree
           ),
         ],
       ),
+    );
+  }
+
+  /// Membangun kanvas visual animasi sesuai jenis bencana skenario
+  Widget _buildAnimatedCanvas() {
+    final String scenarioId = widget.skenario.id;
+
+    if (scenarioId == 'gempa_kelas') {
+      return _buildGempaAnimation();
+    } else if (scenarioId == 'kebakaran_lab') {
+      return _buildKebakaranAnimation();
+    } else {
+      return _buildBanjirAnimation();
+    }
+  }
+
+  // ================= ANIMASI SKENARIO 1: GEMPA BUMI =================
+  Widget _buildGempaAnimation() {
+    final bool isQuakeActive = _currentSeconds >= 12 && _currentSeconds <= 30;
+    final bool isEvacuating = _currentSeconds > 30;
+
+    return AnimatedBuilder(
+      animation: _shakeAnimController,
+      builder: (context, child) {
+        // Efek getar layar menggunakan translate offsetX & offsetY
+        final double shakeOffset = isQuakeActive ? (_shakeAnimController.value * 12.0 - 6.0) : 0.0;
+
+        return Transform.translate(
+          offset: Offset(shakeOffset, isQuakeActive ? (shakeOffset / 2) : 0),
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              // Efek Lampu Darurat Berkedip
+              if (isQuakeActive)
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    FadeTransition(
+                      opacity: _pulseAnimController,
+                      child: const Icon(Icons.emergency_rounded, color: Colors.amber, size: 28),
+                    ),
+                    const SizedBox(width: 8),
+                    const Text(
+                      'PERINGATAN: GUNCANGAN GEMPA AKTIF',
+                      style: TextStyle(color: Colors.amber, fontWeight: FontWeight.bold, fontSize: 13, letterSpacing: 1),
+                    ),
+                  ],
+                ),
+              const SizedBox(height: 14),
+
+              // Ikon Situasi Ruang Kelas
+              Stack(
+                alignment: Alignment.center,
+                children: [
+                  Container(
+                    width: 130,
+                    height: 130,
+                    decoration: BoxDecoration(
+                      shape: BoxShape.circle,
+                      color: isQuakeActive ? Colors.redAccent.withValues(alpha: 0.15) : Colors.white10,
+                    ),
+                  ),
+                  Icon(
+                    isEvacuating
+                        ? Icons.directions_run_rounded
+                        : (isQuakeActive ? Icons.table_restaurant_rounded : Icons.apartment_rounded),
+                    size: 80,
+                    color: isQuakeActive ? Colors.amberAccent : Colors.white70,
+                  ),
+                ],
+              ),
+              const SizedBox(height: 14),
+
+              Text(
+                isEvacuating
+                    ? 'Tahap Evakuasi: Menuju Tangga Darurat'
+                    : (isQuakeActive ? '⚠️ Puing Berjatuhan! Berlindung di Bawah Meja' : 'Suasana Pembelajaran di Kelas (Lantai 3)'),
+                style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 14),
+              ),
+              const SizedBox(height: 6),
+              Text(
+                'Skenario: Ruang Kelas SMA • Animasi 2D Interaktif',
+                style: TextStyle(color: Colors.white.withValues(alpha: 0.6), fontSize: 11),
+              ),
+            ],
+          ),
+        );
+      },
+    );
+  }
+
+  // ================= ANIMASI SKENARIO 2: KEBAKARAN LAB =================
+  Widget _buildKebakaranAnimation() {
+    final bool isFireActive = _currentSeconds >= 12;
+
+    return Column(
+      mainAxisAlignment: MainAxisAlignment.center,
+      children: [
+        if (isFireActive)
+          FadeTransition(
+            opacity: _pulseAnimController,
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: const [
+                Icon(Icons.local_fire_department_rounded, color: Colors.redAccent, size: 24),
+                SizedBox(width: 6),
+                Text(
+                  'BAHAYA API & ASAP TEBAL DI LABORATORIUM',
+                  style: TextStyle(color: Colors.redAccent, fontWeight: FontWeight.bold, fontSize: 12),
+                ),
+              ],
+            ),
+          ),
+        const SizedBox(height: 14),
+
+        Stack(
+          alignment: Alignment.center,
+          children: [
+            Container(
+              width: 130,
+              height: 130,
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                color: isFireActive ? Colors.deepOrange.withValues(alpha: 0.2) : Colors.white10,
+              ),
+            ),
+            Icon(
+              isFireActive ? Icons.local_fire_department_rounded : Icons.computer_rounded,
+              size: 80,
+              color: isFireActive ? Colors.deepOrangeAccent : Colors.white70,
+            ),
+          ],
+        ),
+        const SizedBox(height: 14),
+
+        Text(
+          isFireActive
+              ? 'Kepulan Asap Karbon Monoksida • Merangkak Rendah!'
+              : 'Praktikum Komputer Berjalan Normal',
+          style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 14),
+        ),
+        const SizedBox(height: 6),
+        Text(
+          'Skenario: Korsleting Server Lab Komputer • Animasi 2D',
+          style: TextStyle(color: Colors.white.withValues(alpha: 0.6), fontSize: 11),
+        ),
+      ],
+    );
+  }
+
+  // ================= ANIMASI SKENARIO 3: BANJIR TANGGUL =================
+  Widget _buildBanjirAnimation() {
+    final bool isFloodActive = _currentSeconds >= 14;
+
+    return Column(
+      mainAxisAlignment: MainAxisAlignment.center,
+      children: [
+        if (isFloodActive)
+          FadeTransition(
+            opacity: _pulseAnimController,
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: const [
+                Icon(Icons.waves_rounded, color: Colors.lightBlueAccent, size: 24),
+                SizedBox(width: 6),
+                Text(
+                  'DEBIT AIR TANGGUL MELUAP CEPAT',
+                  style: TextStyle(color: Colors.lightBlueAccent, fontWeight: FontWeight.bold, fontSize: 12),
+                ),
+              ],
+            ),
+          ),
+        const SizedBox(height: 14),
+
+        Stack(
+          alignment: Alignment.center,
+          children: [
+            Container(
+              width: 130,
+              height: 130,
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                color: isFloodActive ? Colors.blue.withValues(alpha: 0.2) : Colors.white10,
+              ),
+            ),
+            Icon(
+              isFloodActive ? Icons.tsunami_rounded : Icons.house_rounded,
+              size: 80,
+              color: isFloodActive ? Colors.lightBlueAccent : Colors.white70,
+            ),
+          ],
+        ),
+        const SizedBox(height: 14),
+
+        Text(
+          isFloodActive
+              ? 'Arus Deras Memasuki Rumah • Evakuasi Vertikal!'
+              : 'Hujan Lebat di Kawasan Pemukiman Warga',
+          style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 14),
+        ),
+        const SizedBox(height: 6),
+        Text(
+          'Skenario: Tanggul Jebol & Banjir Bandang • Animasi 2D',
+          style: TextStyle(color: Colors.white.withValues(alpha: 0.6), fontSize: 11),
+        ),
+      ],
     );
   }
 }
