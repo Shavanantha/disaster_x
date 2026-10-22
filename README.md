@@ -1,154 +1,159 @@
-# DISASTER-X (Digital Interactive Simulation for Adaptive Emergency Response)
+# DISASTER-X
 
-**DISASTER-X** adalah aplikasi mobile berbasis Flutter yang dirancang sebagai media pembelajaran interaktif dan simulasi mitigasi bencana alam serta kegawatdaruratan bagi siswa dan mahasiswa. Aplikasi ini dikembangkan untuk memenuhi tugas mata kuliah **Mobile Programming**.
+**Digital Interactive Simulation for Adaptive Emergency Response**
 
----
+DISASTER-X adalah aplikasi pembelajaran mitigasi bencana berbasis **Flutter** yang menggabungkan materi edukasi, latihan evaluasi, dan simulasi pengambilan keputusan. Proyek ini dikembangkan untuk tugas mata kuliah **Mobile Programming**.
 
-## 👨‍🎓 Identitas Mahasiswa & Pengembang
-- **Nama:** Shava Phiyan Anantha
-- **NIM:** 2413025047
-- **Mata Kuliah:** Mobile Programming
-- **Framework & Bahasa:** Flutter 3.47+ / Dart 3.13+
-- **Manajemen Data:** SharedPreferences (Penyimpanan Lokal Persisten)
+> **Status pengembangan:** Aplikasi masih dikembangkan. Simulasi **gempa bumi** telah memiliki interaksi berbasis checkpoint dan *Safety Score*. Simulasi **kebakaran** dan **banjir** belum selesai dikembangkan sebagai simulasi interaktif.
 
----
+## Identitas proyek
 
-## 🚀 Fitur Utama Aplikasi
+| Informasi | Keterangan |
+| --- | --- |
+| Nama aplikasi | DISASTER-X |
+| Pengembang utama | Shava Phiyan Anantha |
+| NIM | 2413025047 |
+| Mata kuliah | Mobile Programming |
+| Teknologi | Flutter dan Dart |
+| Penyimpanan lokal | `shared_preferences` (sesuai konfigurasi proyek) |
 
-### 1. 📱 Autentikasi & Profil Siswa
-- **Login Mahasiswa:** Form input Nama Lengkap dan NIM/NISN dengan validasi.
-- **Mode Tamu (Guest):** Akses langsung tanpa login untuk pengujian cepat.
-- **Edit Profil Dinamis:** Pengguna dapat memperbarui identitas siswa, asal sekolah/kampus, dan jurusan sewaktu-waktu.
-- **Penyimpanan Lokal:** Sesi masuk dan data akun tersimpan secara lokal menggunakan `shared_preferences`.
+Proyek ini dikerjakan dalam konteks tugas kelompok. Kontribusi setiap anggota perlu dijelaskan sesuai pekerjaan yang benar-benar dilakukan; identitas dan pembagian tugas dapat dilengkapi setelah diverifikasi bersama kelompok.
 
-### 2. 🏠 Beranda Terintegrasi (Home Screen)
-- **Salam Pengguna Dinamis:** Menampilkan sapaan nama siswa dan predikat level kesiapsiagaan (Siaga Pratama, Madya, Utama).
-- **Indikator Progres Belajar:** Perhitungan persentase kesiapan otomatis berdasarkan jumlah modul yang selesai dibaca dan simulasi/kuis yang dikerjakan.
-- **Quick SOS Bar:** Akses cepat satu ketukan menuju menu Nomor Darurat Nasional.
-- **Menu Navigasi 2x2:** Akses cepat ke Modul Materi, Simulasi Bencana, Kuis Evaluasi, dan Riwayat Nilai.
-- **Berita & Tips Mitigasi:** Artikel edukasi bencana interaktif (Gempa, Kebakaran, Tas Siaga) yang dapat dibuka dalam modal lembar bacaan lengkap.
+## Tujuan aplikasi
 
-### 3. 📚 Modul Materi & E-LKPD (4 Bencana Utama)
-Mencakup 4 modul materi komprehensif berstandar BNPB:
-1. **Mitigasi Gempa Bumi** (Drop, Cover, Hold On, jalur evakuasi aman, gempa susulan).
-2. **Mitigasi Kebakaran Gedung** (Teknik PASS APAR, penyelamatan asap tebal beracun).
-3. **Mitigasi Banjir Luapan** (Pemutusan arus listrik, penyelamatan arsip, penyakit pascabanjir).
-4. **Mitigasi Tsunami & Pesisir** (Golden rule 20-20-20, tanda air laut surut tiba-tiba).
+DISASTER-X bertujuan membantu pengguna mempelajari langkah kesiapsiagaan dan respons awal terhadap bencana melalui materi yang mudah diakses serta latihan memilih tindakan dalam suatu skenario. Aplikasi ini merupakan **media edukasi**, bukan pengganti arahan petugas atau informasi resmi saat keadaan darurat.
 
-Setiap modul dilengkapi 4 sub-tab pembelajaran:
-- **Prabencana (Siaga)**: Langkah persiapan dan pencegahan dini.
-- **Saat Kejadian (Aksi)**: Tindakan penyelamatan diri darurat.
-- **Pascabencana (Pemulihan)**: Penanganan setelah situasi mereda.
-- **Do's & Don'ts**: Daftar anjuran dan larangan tindakan kritis.
-- **Fitur Penyelesaian Modul**: Tombol "Tandai Modul Selesai" untuk memperbarui persentase belajar.
+## Fitur aplikasi
 
-### 4. 🎮 Simulasi Bencana Interaktif (Interactive Branching Simulation)
-Fitur simulasi waktu nyata (real-time simulation) dengan skenario percabangan keputusan:
-- **Skenario 1:** Evakuasi Gempa Bumi di Ruang Kelas (Lantai 3) - 60 Detik.
-- **Skenario 2:** Korsleting Listrik & Kebakaran di Lab Komputer - 50 Detik.
-- **Skenario 3:** Bertahan saat Tanggul Jebol & Banjir Bandang - 55 Detik.
+### 1. Login, mode tamu, dan profil
 
-**Mekanisme Simulasi:**
-- **Auto-Pause Checkpoint:** Simulasi otomatis berhenti ketika peristiwa kritis terjadi.
-- **Pilihan Keputusan (A, B, C):** Pengguna memilih tindakan yang harus diambil.
-- **Feedback & Konsekuensi Edukatif:** Menjelaskan alasan mengapa suatu tindakan aman atau berbahaya.
-- **Safety Score Dinamis (+/-):** Skor bertambah jika tindakan benar dan berkurang jika membahayakan.
-- **Evaluasi Akhir:** Menampilkan predikat kelulusan dan menyimpan skor ke histori.
+Rancangan aplikasi mencakup pengisian identitas pengguna, akses melalui mode tamu, pengelolaan profil, dan penyimpanan data lokal. Ketersediaan serta perilaku masing-masing fungsi perlu diperiksa pada versi aplikasi yang akan didemonstrasikan.
 
-### 5. 📝 Kuis Evaluasi Berwaktu (Timed Quizzes)
-- Kuis bertopik untuk Gempa Bumi, Kebakaran, dan Banjir.
-- Dilengkapi **penghitung mundur waktu (countdown timer)**.
-- Pertanyaan pilihan ganda interaktif dengan indikator progres soal.
-- Modal konfirmasi pengumpulan sebelum waktu habis.
-- **Halaman Hasil & Pembahasan Lengkap:** Menampilkan perolehan nilai (/100), predikat kelulusan, statistik benar/salah, serta kunci jawaban dan pembahasan untuk setiap butir soal.
+### 2. Beranda dan navigasi
 
-### 6. 🧰 Fitur Pendukung Kesiapsiagaan
-- **Checklist Tas Siaga Bencana (72 Jam):** Daftar perlengkapan ransel bertahan hidup 3 hari berstandar BNPB dengan kotak centang yang statusnya tersimpan di database lokal.
-- **Nomor Darurat Nasional (SOS):** Kontak telepon bebas pulsa 112 (Darurat), 113 (Damkar), 115 (Basarnas), 118 (Ambulans/PMI), 110 (Polisi), dan 119 (Kemenkes).
-- **Riwayat Nilai:** Audit log lengkap riwayat pengerjaan kuis dan simulasi siswa beserta tanggal dan status.
-- **Sertifikat Kelulusan Digital:** Sertifikat penghargaan kesiapsiagaan berpredikat resmi atas nama siswa yang dapat diunduh/disimpan.
-- **Fitur Reset Data:** Opsi reset kembali ke kondisi awal yang sangat praktis untuk keperluan presentasi dan penilaian dosen.
+Beranda digunakan sebagai pintu masuk menuju materi mitigasi, simulasi, kuis, serta fitur pendukung. Informasi progres belajar dan ringkasan aktivitas ditampilkan sesuai implementasi pada aplikasi.
 
----
+### 3. Materi mitigasi dan E-LKPD
 
-## 📂 Struktur Direktori Proyek
+Cakupan materi yang dirancang meliputi:
 
-```
+- **Gempa bumi:** perlindungan diri saat guncangan dan evakuasi aman.
+- **Kebakaran:** pencegahan dan respons awal terhadap kebakaran.
+- **Banjir:** persiapan dan langkah keselamatan saat banjir.
+- **Tsunami:** pengenalan tanda bahaya dan evakuasi menuju lokasi aman.
+
+Materi dapat disusun berdasarkan tahap **prabencana, saat kejadian, pascabencana**, serta **hal yang dianjurkan dan perlu dihindari**. Kelengkapan tiap modul mengikuti implementasi yang tersedia dalam aplikasi.
+
+### 4. Simulasi bencana interaktif
+
+**Sudah diimplementasikan: Simulasi Gempa Bumi**
+
+Simulasi gempa menempatkan pengguna dalam situasi darurat dan meminta pengguna menentukan tindakan pada titik-titik keputusan (*checkpoint*). Mekanisme yang sudah diuji dalam pengembangan meliputi:
+
+- Simulasi berhenti sementara pada checkpoint.
+- Pengguna memilih tindakan yang tersedia.
+- Aplikasi memberikan umpan balik terhadap pilihan.
+- **Safety Score** berubah sesuai keputusan pengguna.
+- Hasil keputusan digunakan sebagai bagian dari evaluasi kesiapsiagaan.
+
+**Masih dalam pengembangan:**
+
+- Simulasi kebakaran di laboratorium komputer.
+- Simulasi banjir atau banjir bandang.
+
+Kedua skenario tersebut **belum dinyatakan selesai atau siap dimainkan secara interaktif**.
+
+### 5. Kuis evaluasi
+
+Proyek mencakup rancangan kuis untuk mengukur pemahaman pengguna tentang mitigasi bencana. Fitur seperti batas waktu, skor, pembahasan jawaban, dan penyimpanan hasil perlu dicocokkan dengan implementasi terkini sebelum dinyatakan sepenuhnya berfungsi.
+
+### 6. Fitur pendukung
+
+Dalam rancangan proyek terdapat fitur pendukung seperti informasi nomor darurat, checklist tas siaga, riwayat nilai, dan sertifikat. Keberadaan menu tidak selalu berarti seluruh fungsi—termasuk penyimpanan, unduh, atau ekspor—sudah selesai diuji. Status fitur-fitur ini mengikuti versi aplikasi yang tersedia.
+
+## Teknologi yang digunakan
+
+- **Flutter** — framework pengembangan antarmuka lintas platform.
+- **Dart** — bahasa pemrograman aplikasi.
+- **`shared_preferences`** — penyimpanan data sederhana secara lokal, apabila digunakan pada fitur terkait.
+
+Versi Flutter, Dart, dan dependensi yang tepat dapat diperiksa melalui `flutter --version` dan `pubspec.yaml` pada proyek ini.
+
+## Struktur proyek
+
+Struktur utama proyek Flutter adalah sebagai berikut. Nama file dan folder dapat berkembang mengikuti pembaruan implementasi.
+
+```text
 disaster_x/
-├── android/                   # Konfigurasi platform Android
-├── ios/                       # Konfigurasi platform iOS
-├── web/                       # Konfigurasi platform Web
-├── windows/                   # Konfigurasi platform Windows Desktop
-├── test/
-│   └── widget_test.dart       # Widget smoke tests (Passed)
-├── lib/
-│   ├── main.dart              # Titik masuk aplikasi (Entry point & Theme)
-│   ├── models/                # Data model class
-│   │   ├── bencana_model.dart
-│   │   ├── simulasi_model.dart
-│   │   ├── kuis_model.dart
-│   │   └── user_profile_model.dart
-│   ├── services/              # Logika data & penyimpanan lokal
-│   │   ├── dummy_data.dart    # Dataset edukasi BNPB, skenario, & kuis
-│   │   └── storage_service.dart # SharedPreferences wrapper
-│   ├── widgets/               # Komponen UI pendukung
-│   │   └── icon_helper.dart
-│   └── screens/               # Tampilan layar aplikasi
-│       ├── splash_screen.dart # Layar pembuka beranimasi
-│       ├── main_navigation.dart # 5-Tab Bottom Navigation Bar
-│       ├── auth/
-│       │   └── login_screen.dart
-│       ├── home/
-│       │   └── home_screen.dart
-│       ├── materi/
-│       │   ├── materi_screen.dart
-│       │   └── materi_detail_screen.dart
-│       ├── simulasi/
-│       │   ├── simulasi_screen.dart
-│       │   └── interactive_simulation_screen.dart
-│       ├── kuis/
-│       │   ├── kuis_screen.dart
-│       │   ├── kuis_play_screen.dart
-│       │   └── kuis_result_screen.dart
-│       └── profil/
-│           ├── profil_screen.dart
-│           ├── edit_profil_dialog.dart
-│           ├── riwayat_nilai_screen.dart
-│           ├── sertifikat_screen.dart
-│           ├── nomor_darurat_screen.dart
-│           ├── tas_siaga_screen.dart
-│           └── tentang_aplikasi_screen.dart
-└── pubspec.yaml               # Metadata & dependencies Flutter
+├── lib/                  # Kode sumber Dart
+│   ├── main.dart         # Titik masuk aplikasi
+│   ├── models/           # Model data
+│   ├── services/         # Pengelolaan data dan penyimpanan
+│   ├── widgets/          # Komponen antarmuka yang digunakan ulang
+│   └── screens/          # Halaman aplikasi
+├── test/                 # Pengujian (jika tersedia)
+├── android/              # Konfigurasi Android
+├── web/                  # Konfigurasi Web
+├── pubspec.yaml          # Dependensi dan metadata proyek
+├── AI_DECLARATION.md     # Dokumentasi penggunaan AI
+└── README.md             # Dokumentasi utama proyek
 ```
 
----
+## Cara menjalankan aplikasi
 
-## 🛠️ Cara Menjalankan Aplikasi
+**Prasyarat:** Flutter SDK dan perangkat atau browser yang didukung telah disiapkan.
 
-1. Pastikan Flutter SDK sudah terpasang di komputer Anda:
+1. Buka terminal di folder proyek `disaster_x`.
+2. Periksa instalasi Flutter dan unduh dependensi:
+
    ```bash
-   flutter --version
-   ```
-
-2. Buka terminal di folder proyek ini (`disaster_x`), lalu unduh dependencies:
-   ```bash
+   flutter doctor
    flutter pub get
    ```
 
-3. Jalankan pengujian widget dan analisis kode:
+3. Jalankan aplikasi pada Chrome:
+
    ```bash
-   flutter test
-   flutter analyze
+   flutter run -d chrome
    ```
 
-4. Jalankan aplikasi pada perangkat / emulator yang tersedia:
+   Atau lihat perangkat yang tersedia dan pilih target yang sesuai:
+
    ```bash
-   # Jalankan di Chrome (Web)
-   flutter run -d chrome
-
-   # Jalankan di Windows Desktop
-   flutter run -d windows
-
-   # Jalankan di Emulator Android atau Handphone
+   flutter devices
    flutter run
    ```
+
+4. Untuk memeriksa kode dan menjalankan pengujian yang tersedia:
+
+   ```bash
+   flutter analyze
+   flutter test
+   ```
+
+   > Perintah di atas merupakan **langkah pemeriksaan**, bukan klaim bahwa seluruh pengujian telah lulus. Hasilnya bergantung pada keadaan kode dan lingkungan pengembangan saat dijalankan.
+
+## Penggunaan AI dalam pengembangan
+
+Pengembangan DISASTER-X melibatkan bantuan AI dengan peran berbeda:
+
+- **Gemini:** membantu proses belajar dan memahami dasar Flutter pada tahap awal.
+- **Google Antigravity:** membantu pengembangan kode dan penyusunan sejumlah fitur aplikasi secara substansial.
+- **ChatGPT:** membantu diskusi pengembangan, evaluasi antarmuka, serta penyempurnaan konsep dan mekanisme simulasi interaktif.
+
+Detail penggunaan AI, contoh prompt, dan evaluasi hasilnya didokumentasikan secara terpisah pada **[AI_DECLARATION.md](AI_DECLARATION.md)**.
+
+## Status dan rencana pengembangan
+
+| Komponen | Status |
+| --- | --- |
+| Simulasi interaktif gempa bumi | Sudah diimplementasikan; perlu pengujian akhir sebelum presentasi |
+| Simulasi interaktif kebakaran | Dalam pengembangan |
+| Simulasi interaktif banjir | Dalam pengembangan |
+| Fitur lainnya | Perlu pemeriksaan akhir berdasarkan aplikasi terbaru |
+
+Rencana pengembangan berikutnya adalah melengkapi simulasi kebakaran dan banjir, menguji konsistensi penyimpanan progres dan skor, serta memperbaiki pengalaman pengguna berdasarkan hasil pengujian.
+
+## Catatan
+
+Informasi keselamatan dalam aplikasi ditujukan untuk pembelajaran. Saat terjadi bencana nyata, ikuti informasi resmi dan instruksi petugas berwenang.
