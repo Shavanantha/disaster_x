@@ -1,3 +1,4 @@
+
 import 'package:flutter/material.dart';
 import '../../models/bencana_model.dart';
 import '../../services/storage_service.dart';
@@ -17,9 +18,15 @@ class MateriDetailScreen extends StatefulWidget {
   State<MateriDetailScreen> createState() => _MateriDetailScreenState();
 }
 
-class _MateriDetailScreenState extends State<MateriDetailScreen> with SingleTickerProviderStateMixin {
+class _MateriDetailScreenState extends State<MateriDetailScreen>
+    with SingleTickerProviderStateMixin {
   late TabController _tabController;
   late bool _completed;
+
+  static const Color _navy = Color(0xFF172554);
+  static const Color _background = Color(0xFFF5F7FC);
+
+  Color get _themeColor => Color(widget.modul.warnaHex);
 
   @override
   void initState() {
@@ -35,81 +42,179 @@ class _MateriDetailScreenState extends State<MateriDetailScreen> with SingleTick
   }
 
   Future<void> _selesaikanModul() async {
+    if (_completed) return;
+
     await StorageService.markModuleCompleted(widget.modul.id);
+
+    if (!mounted) return;
+
     setState(() {
       _completed = true;
     });
-    if (!mounted) return;
+
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
-        content: Row(
-          children: const [
+        behavior: SnackBarBehavior.floating,
+        backgroundColor: const Color(0xFF15803D),
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(14),
+        ),
+        content: const Row(
+          children: [
             Icon(Icons.check_circle_rounded, color: Colors.white),
-            SizedBox(width: 8),
-            Text('Modul berhasil diselesaikan! Progress bertambah.'),
+            SizedBox(width: 10),
+            Expanded(
+              child: Text(
+                'Modul berhasil diselesaikan!',
+                style: TextStyle(fontWeight: FontWeight.w600),
+              ),
+            ),
           ],
         ),
-        backgroundColor: Colors.green,
-        duration: const Duration(seconds: 2),
       ),
     );
   }
 
   @override
   Widget build(BuildContext context) {
-    final themeColor = Color(widget.modul.warnaHex);
-
     return Scaffold(
-      backgroundColor: const Color(0xFFF7F9FC),
+      backgroundColor: _background,
       appBar: AppBar(
-        title: Text(widget.modul.judul, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
         backgroundColor: Colors.white,
-        foregroundColor: Colors.black87,
+        foregroundColor: _navy,
         elevation: 0,
-        bottom: TabBar(
-          controller: _tabController,
-          labelColor: themeColor,
-          unselectedLabelColor: Colors.grey,
-          indicatorColor: themeColor,
-          isScrollable: true,
-          labelStyle: const TextStyle(fontWeight: FontWeight.bold, fontSize: 12),
-          tabs: const [
-            Tab(text: 'Prabencana (Siaga)'),
-            Tab(text: 'Saat Kejadian (Aksi)'),
-            Tab(text: 'Pascabencana (Pemulihan)'),
-            Tab(text: "Do's & Don'ts"),
-          ],
+        scrolledUnderElevation: 0,
+        title: const Text(
+          'Detail Materi',
+          style: TextStyle(
+            fontSize: 17,
+            fontWeight: FontWeight.w800,
+          ),
         ),
       ),
       body: Column(
         children: [
-          // Banner Capaian Pembelajaran Modul
+          // HERO MATERI
           Container(
-            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+            width: double.infinity,
+            margin: const EdgeInsets.fromLTRB(18, 12, 18, 0),
+            padding: const EdgeInsets.all(20),
             decoration: BoxDecoration(
-              color: themeColor.withValues(alpha: 0.08),
-              border: Border(bottom: BorderSide(color: themeColor.withValues(alpha: 0.2))),
-            ),
-            child: Row(
-              children: [
-                CircleAvatar(
-                  radius: 20,
-                  backgroundColor: themeColor.withValues(alpha: 0.15),
-                  child: Icon(getDisasterIcon(widget.modul.ikon), color: themeColor, size: 22),
+              gradient: LinearGradient(
+                colors: [
+                  _themeColor,
+                  Color.lerp(_themeColor, _navy, 0.35)!,
+                ],
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+              ),
+              borderRadius: BorderRadius.circular(26),
+              boxShadow: [
+                BoxShadow(
+                  color: _themeColor.withValues(alpha: 0.18),
+                  blurRadius: 18,
+                  offset: const Offset(0, 8),
                 ),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        'Target Kompetensi Siswa:',
-                        style: TextStyle(fontWeight: FontWeight.bold, fontSize: 11, color: themeColor),
+              ],
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Container(
+                      width: 61,
+                      height: 61,
+                      decoration: BoxDecoration(
+                        color: Colors.white.withValues(alpha: 0.18),
+                        borderRadius: BorderRadius.circular(19),
                       ),
-                      const SizedBox(height: 2),
-                      Text(
-                        widget.modul.capaian,
-                        style: const TextStyle(fontSize: 12, color: Colors.black87, height: 1.25),
+                      child: Icon(
+                        getDisasterIcon(widget.modul.ikon),
+                        color: Colors.white,
+                        size: 34,
+                      ),
+                    ),
+                    const SizedBox(width: 14),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Container(
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 10,
+                              vertical: 5,
+                            ),
+                            decoration: BoxDecoration(
+                              color: Colors.white.withValues(alpha: 0.17),
+                              borderRadius: BorderRadius.circular(8),
+                            ),
+                            child: Text(
+                              widget.modul.kategori.toUpperCase(),
+                              style: const TextStyle(
+                                color: Colors.white,
+                                fontSize: 10,
+                                fontWeight: FontWeight.w900,
+                                letterSpacing: 1,
+                              ),
+                            ),
+                          ),
+                          const SizedBox(height: 9),
+                          Text(
+                            widget.modul.judul,
+                            style: const TextStyle(
+                              color: Colors.white,
+                              fontSize: 20,
+                              fontWeight: FontWeight.w900,
+                              height: 1.25,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 17),
+                Text(
+                  widget.modul.ringkasan,
+                  style: const TextStyle(
+                    color: Color(0xFFF0F5FF),
+                    fontSize: 12,
+                    height: 1.65,
+                  ),
+                ),
+                const SizedBox(height: 17),
+                Container(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 12,
+                    vertical: 10,
+                  ),
+                  decoration: BoxDecoration(
+                    color: Colors.white.withValues(alpha: 0.13),
+                    borderRadius: BorderRadius.circular(13),
+                  ),
+                  child: Row(
+                    children: [
+                      Icon(
+                        _completed
+                            ? Icons.check_circle_rounded
+                            : Icons.menu_book_rounded,
+                        color: Colors.white,
+                        size: 19,
+                      ),
+                      const SizedBox(width: 9),
+                      Expanded(
+                        child: Text(
+                          _completed
+                              ? 'Materi telah diselesaikan'
+                              : 'Pelajari setiap langkah untuk bersiap',
+                          style: const TextStyle(
+                            color: Colors.white,
+                            fontSize: 11,
+                            fontWeight: FontWeight.w700,
+                          ),
+                        ),
                       ),
                     ],
                   ),
@@ -118,43 +223,190 @@ class _MateriDetailScreenState extends State<MateriDetailScreen> with SingleTick
             ),
           ),
 
-          // Isi Tab Konten
-          Expanded(
-            child: TabBarView(
-              controller: _tabController,
+          // TARGET KOMPETENSI
+          Container(
+            margin: const EdgeInsets.fromLTRB(18, 14, 18, 14),
+            padding: const EdgeInsets.all(15),
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(19),
+              border: Border.all(color: const Color(0xFFE6EAF2)),
+            ),
+            child: Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                _buildListTab('Langkah Kesiapsiagaan Prabencana', widget.modul.prabencana, Icons.shield_outlined, themeColor),
-                _buildListTab('Tindakan Cepat Saat Bencana Terjadi', widget.modul.saatBencana, Icons.warning_rounded, Colors.redAccent),
-                _buildListTab('Prosedur Keselamatan Pascabencana', widget.modul.pascabencana, Icons.health_and_safety_outlined, Colors.teal),
-                _buildDosDontsTab(themeColor),
+                Container(
+                  width: 42,
+                  height: 42,
+                  decoration: BoxDecoration(
+                    color: _themeColor.withValues(alpha: 0.10),
+                    borderRadius: BorderRadius.circular(13),
+                  ),
+                  child: Icon(
+                    Icons.school_rounded,
+                    color: _themeColor,
+                    size: 23,
+                  ),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      const Text(
+                        'Target Kompetensi',
+                        style: TextStyle(
+                          color: _navy,
+                          fontSize: 13,
+                          fontWeight: FontWeight.w800,
+                        ),
+                      ),
+                      const SizedBox(height: 5),
+                      Text(
+                        widget.modul.capaian,
+                        style: const TextStyle(
+                          color: Color(0xFF69768C),
+                          fontSize: 12,
+                          height: 1.6,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
               ],
             ),
           ),
 
-          // Tombol Selesaikan Modul di Bagian Bawah
+          // NAVIGASI TAB
           Container(
-            padding: const EdgeInsets.all(16),
+            margin: const EdgeInsets.symmetric(horizontal: 18),
+            padding: const EdgeInsets.all(5),
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(17),
+              border: Border.all(color: const Color(0xFFE6EAF2)),
+            ),
+            child: TabBar(
+              controller: _tabController,
+              isScrollable: true,
+              tabAlignment: TabAlignment.start,
+              dividerColor: Colors.transparent,
+              indicatorSize: TabBarIndicatorSize.tab,
+              indicator: BoxDecoration(
+                color: _themeColor,
+                borderRadius: BorderRadius.circular(12),
+              ),
+              labelColor: Colors.white,
+              unselectedLabelColor: const Color(0xFF778399),
+              labelStyle: const TextStyle(
+                fontSize: 11,
+                fontWeight: FontWeight.w800,
+              ),
+              unselectedLabelStyle: const TextStyle(
+                fontSize: 11,
+                fontWeight: FontWeight.w600,
+              ),
+              tabs: const [
+                Tab(
+                  icon: Icon(Icons.shield_outlined, size: 17),
+                  text: 'Prabencana',
+                ),
+                Tab(
+                  icon: Icon(Icons.warning_amber_rounded, size: 17),
+                  text: 'Saat Bencana',
+                ),
+                Tab(
+                  icon: Icon(Icons.health_and_safety_outlined, size: 17),
+                  text: 'Pascabencana',
+                ),
+                Tab(
+                  icon: Icon(Icons.fact_check_outlined, size: 17),
+                  text: "Do's & Don'ts",
+                ),
+              ],
+            ),
+          ),
+
+          const SizedBox(height: 10),
+
+          // ISI MATERI
+          Expanded(
+            child: TabBarView(
+              controller: _tabController,
+              children: [
+                _buildListTab(
+                  'Persiapan Sebelum Bencana',
+                  'Kenali risiko dan siapkan diri sejak dini.',
+                  widget.modul.prabencana,
+                  Icons.shield_rounded,
+                  _themeColor,
+                ),
+                _buildListTab(
+                  'Tindakan Saat Keadaan Darurat',
+                  'Utamakan keselamatan dan ikuti prosedur.',
+                  widget.modul.saatBencana,
+                  Icons.emergency_rounded,
+                  const Color(0xFFDC4545),
+                ),
+                _buildListTab(
+                  'Langkah Setelah Bencana',
+                  'Pulihkan kondisi dengan tetap waspada.',
+                  widget.modul.pascabencana,
+                  Icons.health_and_safety_rounded,
+                  const Color(0xFF0D9488),
+                ),
+                _buildDosDontsTab(),
+              ],
+            ),
+          ),
+
+          // TOMBOL SELESAIKAN
+          Container(
+            padding: const EdgeInsets.fromLTRB(18, 12, 18, 16),
             decoration: BoxDecoration(
               color: Colors.white,
               boxShadow: [
-                BoxShadow(color: Colors.black.withValues(alpha: 0.05), blurRadius: 8, offset: const Offset(0, -2)),
+                BoxShadow(
+                  color: _navy.withValues(alpha: 0.06),
+                  blurRadius: 15,
+                  offset: const Offset(0, -4),
+                ),
               ],
             ),
-            child: SizedBox(
-              width: double.infinity,
-              height: 48,
-              child: ElevatedButton.icon(
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: _completed ? Colors.green : themeColor,
-                  foregroundColor: Colors.white,
-                  elevation: 0,
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                ),
-                onPressed: _completed ? null : _selesaikanModul,
-                icon: Icon(_completed ? Icons.check_circle_rounded : Icons.bookmark_added_rounded),
-                label: Text(
-                  _completed ? 'Modul Telah Diselesaikan (100%)' : 'Tandai Selesai Membaca Modul',
-                  style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13),
+            child: SafeArea(
+              top: false,
+              child: SizedBox(
+                width: double.infinity,
+                height: 52,
+                child: ElevatedButton.icon(
+                  onPressed: _completed ? null : _selesaikanModul,
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: _completed
+                        ? const Color(0xFF15803D)
+                        : _themeColor,
+                    disabledBackgroundColor: const Color(0xFFDCFCE7),
+                    foregroundColor: Colors.white,
+                    disabledForegroundColor: const Color(0xFF15803D),
+                    elevation: 0,
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(16),
+                    ),
+                  ),
+                  icon: Icon(
+                    _completed
+                        ? Icons.check_circle_rounded
+                        : Icons.task_alt_rounded,
+                    size: 21,
+                  ),
+                  label: Text(
+                    _completed
+                        ? 'Modul Selesai'
+                        : 'Tandai Modul Selesai',
+                    style: const TextStyle(
+                      fontSize: 13,
+                      fontWeight: FontWeight.w800,
+                    ),
+                  ),
                 ),
               ),
             ),
@@ -164,45 +416,127 @@ class _MateriDetailScreenState extends State<MateriDetailScreen> with SingleTick
     );
   }
 
-  Widget _buildListTab(String title, List<String> items, IconData icon, Color color) {
+  Widget _buildListTab(
+    String title,
+    String subtitle,
+    List<String> items,
+    IconData icon,
+    Color color,
+  ) {
+    if (items.isEmpty) {
+      return Center(
+        child: Padding(
+          padding: const EdgeInsets.all(24),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Icon(
+                Icons.menu_book_rounded,
+                color: color.withValues(alpha: 0.6),
+                size: 44,
+              ),
+              const SizedBox(height: 12),
+              const Text(
+                'Belum ada materi pada bagian ini.',
+                textAlign: TextAlign.center,
+                style: TextStyle(
+                  color: _navy,
+                  fontWeight: FontWeight.w700,
+                ),
+              ),
+            ],
+          ),
+        ),
+      );
+    }
+
     return ListView(
-      padding: const EdgeInsets.all(16),
+      padding: const EdgeInsets.fromLTRB(18, 10, 18, 22),
       children: [
         Row(
           children: [
-            Icon(icon, color: color, size: 20),
-            const SizedBox(width: 8),
-            Text(title, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14)),
+            Container(
+              width: 43,
+              height: 43,
+              decoration: BoxDecoration(
+                color: color.withValues(alpha: 0.11),
+                borderRadius: BorderRadius.circular(14),
+              ),
+              child: Icon(icon, color: color, size: 24),
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    title,
+                    style: const TextStyle(
+                      color: _navy,
+                      fontSize: 15,
+                      fontWeight: FontWeight.w800,
+                    ),
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    subtitle,
+                    style: const TextStyle(
+                      color: Color(0xFF778399),
+                      fontSize: 11,
+                    ),
+                  ),
+                ],
+              ),
+            ),
           ],
         ),
-        const SizedBox(height: 12),
+        const SizedBox(height: 18),
         ...items.asMap().entries.map((entry) {
-          final index = entry.key + 1;
+          final index = entry.key;
           final item = entry.value;
+
           return Container(
-            margin: const EdgeInsets.only(bottom: 10),
-            padding: const EdgeInsets.all(14),
+            margin: const EdgeInsets.only(bottom: 12),
+            padding: const EdgeInsets.all(15),
             decoration: BoxDecoration(
               color: Colors.white,
-              borderRadius: BorderRadius.circular(12),
-              border: Border.all(color: Colors.grey.shade200),
+              borderRadius: BorderRadius.circular(18),
+              border: Border.all(
+                color: const Color(0xFFE7EBF3),
+              ),
             ),
             child: Row(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                CircleAvatar(
-                  radius: 12,
-                  backgroundColor: color.withValues(alpha: 0.12),
+                Container(
+                  width: 35,
+                  height: 35,
+                  alignment: Alignment.center,
+                  decoration: BoxDecoration(
+                    color: color.withValues(alpha: 0.11),
+                    borderRadius: BorderRadius.circular(12),
+                  ),
                   child: Text(
-                    '$index',
-                    style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: color),
+                    '${index + 1}'.padLeft(2, '0'),
+                    style: TextStyle(
+                      color: color,
+                      fontSize: 12,
+                      fontWeight: FontWeight.w900,
+                    ),
                   ),
                 ),
-                const SizedBox(width: 12),
+                const SizedBox(width: 13),
                 Expanded(
-                  child: Text(
-                    item,
-                    style: const TextStyle(fontSize: 13, color: Colors.black87, height: 1.4),
+                  child: Padding(
+                    padding: const EdgeInsets.only(top: 3),
+                    child: Text(
+                      item,
+                      style: const TextStyle(
+                        color: Color(0xFF344054),
+                        fontSize: 13,
+                        height: 1.65,
+                      ),
+                    ),
                   ),
                 ),
               ],
@@ -213,68 +547,137 @@ class _MateriDetailScreenState extends State<MateriDetailScreen> with SingleTick
     );
   }
 
-  Widget _buildDosDontsTab(Color themeColor) {
+  Widget _buildDosDontsTab() {
     return ListView(
-      padding: const EdgeInsets.all(16),
+      padding: const EdgeInsets.fromLTRB(18, 12, 18, 22),
       children: [
-        // Bagian DO'S (Dianjurkan)
-        Row(
-          children: const [
-            Icon(Icons.check_circle_rounded, color: Colors.green, size: 20),
-            SizedBox(width: 8),
-            Text("Hal yang DIANJURKAN (Do's)", style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14, color: Colors.green)),
-          ],
+        _buildRuleSection(
+          title: 'Lakukan',
+          subtitle: 'Tindakan yang dianjurkan',
+          items: widget.modul.dos,
+          color: const Color(0xFF15803D),
+          background: const Color(0xFFF0FDF4),
+          icon: Icons.check_circle_rounded,
+          itemIcon: Icons.check_rounded,
         ),
-        const SizedBox(height: 8),
-        ...widget.modul.dos.map(
-          (text) => Container(
-            margin: const EdgeInsets.only(bottom: 8),
-            padding: const EdgeInsets.all(12),
-            decoration: BoxDecoration(
-              color: Colors.white,
-              borderRadius: BorderRadius.circular(10),
-              border: Border.all(color: Colors.green.shade200),
-            ),
-            child: Row(
-              children: [
-                const Icon(Icons.check, color: Colors.green, size: 18),
-                const SizedBox(width: 10),
-                Expanded(child: Text(text, style: const TextStyle(fontSize: 12, color: Colors.black87))),
-              ],
-            ),
-          ),
-        ),
-
         const SizedBox(height: 18),
-
-        // Bagian DONT'S (Dilarang)
-        Row(
-          children: const [
-            Icon(Icons.cancel_rounded, color: Colors.redAccent, size: 20),
-            SizedBox(width: 8),
-            Text("Hal yang DILARANG (Don'ts)", style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14, color: Colors.redAccent)),
-          ],
-        ),
-        const SizedBox(height: 8),
-        ...widget.modul.donts.map(
-          (text) => Container(
-            margin: const EdgeInsets.only(bottom: 8),
-            padding: const EdgeInsets.all(12),
-            decoration: BoxDecoration(
-              color: Colors.white,
-              borderRadius: BorderRadius.circular(10),
-              border: Border.all(color: Colors.red.shade200),
-            ),
-            child: Row(
-              children: [
-                const Icon(Icons.close, color: Colors.redAccent, size: 18),
-                const SizedBox(width: 10),
-                Expanded(child: Text(text, style: const TextStyle(fontSize: 12, color: Colors.black87))),
-              ],
-            ),
-          ),
+        _buildRuleSection(
+          title: 'Hindari',
+          subtitle: 'Tindakan yang perlu dihindari',
+          items: widget.modul.donts,
+          color: const Color(0xFFDC4545),
+          background: const Color(0xFFFFF1F2),
+          icon: Icons.cancel_rounded,
+          itemIcon: Icons.close_rounded,
         ),
       ],
+    );
+  }
+
+  Widget _buildRuleSection({
+    required String title,
+    required String subtitle,
+    required List<String> items,
+    required Color color,
+    required Color background,
+    required IconData icon,
+    required IconData itemIcon,
+  }) {
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(21),
+        border: Border.all(
+          color: color.withValues(alpha: 0.18),
+        ),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Container(
+                width: 42,
+                height: 42,
+                decoration: BoxDecoration(
+                  color: background,
+                  borderRadius: BorderRadius.circular(13),
+                ),
+                child: Icon(icon, color: color, size: 24),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      title,
+                      style: TextStyle(
+                        color: color,
+                        fontSize: 15,
+                        fontWeight: FontWeight.w900,
+                      ),
+                    ),
+                    const SizedBox(height: 3),
+                    Text(
+                      subtitle,
+                      style: const TextStyle(
+                        color: Color(0xFF778399),
+                        fontSize: 11,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 15),
+          if (items.isEmpty)
+            const Text(
+              'Belum ada poin pada bagian ini.',
+              style: TextStyle(
+                color: Color(0xFF778399),
+                fontSize: 12,
+              ),
+            )
+          else
+            ...items.map(
+              (item) => Container(
+                margin: const EdgeInsets.only(bottom: 9),
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: background,
+                  borderRadius: BorderRadius.circular(13),
+                ),
+                child: Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Padding(
+                      padding: const EdgeInsets.only(top: 1),
+                      child: Icon(
+                        itemIcon,
+                        color: color,
+                        size: 18,
+                      ),
+                    ),
+                    const SizedBox(width: 10),
+                    Expanded(
+                      child: Text(
+                        item,
+                        style: const TextStyle(
+                          color: Color(0xFF344054),
+                          fontSize: 12,
+                          height: 1.6,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+        ],
+      ),
     );
   }
 }

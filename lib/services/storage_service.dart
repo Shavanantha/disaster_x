@@ -1,4 +1,6 @@
+
 import 'dart:convert';
+
 import 'package:shared_preferences/shared_preferences.dart';
 import '../models/user_profile_model.dart';
 
@@ -12,12 +14,14 @@ class StorageService {
   static const String _keyTasSiagaChecked = 'tas_siaga_checked';
   static const String _keyIsLoggedIn = 'is_logged_in';
 
-  // Inisialisasi SharedPreferences
+  // ================= INISIALISASI =================
+
   static Future<SharedPreferences> _getPrefs() async {
-    return await SharedPreferences.getInstance();
+    return SharedPreferences.getInstance();
   }
 
-  // ================= LOGIN & USER PROFILE =================
+  // ================= LOGIN =================
+
   static Future<bool> isLoggedIn() async {
     final prefs = await _getPrefs();
     return prefs.getBool(_keyIsLoggedIn) ?? false;
@@ -28,206 +32,369 @@ class StorageService {
     await prefs.setBool(_keyIsLoggedIn, value);
   }
 
+  // ================= PROFIL PENGGUNA =================
+
   static Future<UserProfile> getUserProfile() async {
     final prefs = await _getPrefs();
     final jsonString = prefs.getString(_keyProfile);
+
     if (jsonString != null) {
       try {
-        final Map<String, dynamic> map = jsonDecode(jsonString) as Map<String, dynamic>;
-        return UserProfile.fromMap(map);
-      } catch (_) {}
+        final decoded = jsonDecode(jsonString);
+
+        if (decoded is Map<String, dynamic>) {
+          return UserProfile.fromMap(decoded);
+        }
+      } catch (_) {
+        // Gunakan profil default jika data tidak valid.
+      }
     }
-    // Default Siswa
+
+    // Profil default untuk pengguna baru.
     return const UserProfile(
-      nama: 'Shava Phiyan Anantha',
-      nim: '2413025047',
-      sekolah: 'Universitas Lampung',
-      kelas: 'Mobile Programming A',
-      isGuest: false,
+      nama: 'Pengguna DISASTER-X',
+      nim: '',
+      sekolah: '',
+      kelas: '',
+      isGuest: true,
     );
   }
 
   static Future<void> saveUserProfile(UserProfile profile) async {
     final prefs = await _getPrefs();
-    await prefs.setString(_keyProfile, jsonEncode(profile.toMap()));
+    await prefs.setString(
+      _keyProfile,
+      jsonEncode(profile.toMap()),
+    );
   }
 
   // ================= MODUL SELESAI =================
+
   static Future<List<String>> getCompletedModules() async {
     final prefs = await _getPrefs();
-    return prefs.getStringList(_keyCompletedModules) ?? ['gempa'];
+
+    return prefs.getStringList(_keyCompletedModules) ?? [];
   }
 
   static Future<void> markModuleCompleted(String moduleId) async {
     final prefs = await _getPrefs();
-    final list = prefs.getStringList(_keyCompletedModules) ?? ['gempa'];
-    if (!list.contains(moduleId)) {
-      list.add(moduleId);
-      await prefs.setStringList(_keyCompletedModules, list);
+    final completedModules =
+        prefs.getStringList(_keyCompletedModules) ?? [];
+
+    if (!completedModules.contains(moduleId)) {
+      completedModules.add(moduleId);
+
+      await prefs.setStringList(
+        _keyCompletedModules,
+        completedModules,
+      );
     }
   }
 
-  // ================= SIMULASI SKENARIO =================
+  // ================= SKENARIO SIMULASI =================
+
   static Future<List<String>> getUnlockedScenarios() async {
     final prefs = await _getPrefs();
-    return prefs.getStringList(_keyUnlockedScenarios) ?? ['gempa_kelas', 'kebakaran_lab', 'banjir_tanggul'];
+
+    // Ketiga skenario tersedia secara default.
+    // Ubah daftar ini jika nantinya ada sistem pembukaan level.
+    return prefs.getStringList(_keyUnlockedScenarios) ??
+        ['gempa_kelas', 'kebakaran_lab', 'banjir_tanggul'];
   }
+
+  // ================= NILAI SIMULASI =================
 
   static Future<Map<String, int>> getSimulationScores() async {
     final prefs = await _getPrefs();
-    final jsonStr = prefs.getString(_keySimulationScores);
-    if (jsonStr != null) {
-      try {
-        final decoded = jsonDecode(jsonStr) as Map<String, dynamic>;
-        return decoded.map((k, v) => MapEntry(k, v as int));
-      } catch (_) {}
+    final jsonString = prefs.getString(_keySimulationScores);
+
+    if (jsonString == null) {
+      return {};
     }
-    return {'gempa_kelas': 85};
+
+    try {
+      final decoded = jsonDecode(jsonString);
+
+      if (decoded is Map<String, dynamic>) {
+        final scores = <String, int>{};
+
+        decoded.forEach((key, value) {
+          if (value is num) {
+            scores[key] = value.toInt().clamp(0, 100);
+          }
+        });
+
+        return scores;
+      }
+    } catch (_) {
+      // Data tidak valid dianggap belum memiliki nilai.
+    }
+
+    return {};
   }
 
-  static Future<void> saveSimulationScore(String scenarioId, int score) async {
+  static Future<void> saveSimulationScore(
+    String scenarioId,
+    int score, {
+    String? scenarioTitle,
+  }) async {
     final prefs = await _getPrefs();
+    final validScore = score.clamp(0, 100);
+
     final currentScores = await getSimulationScores();
-    final prevScore = currentScores[scenarioId] ?? 0;
-    if (score > prevScore) {
-      currentScores[scenarioId] = score;
-      await prefs.setString(_keySimulationScores, jsonEncode(currentScores));
+    final previousScore = currentScores[scenarioId];
+
+    // Simpan skor terbaik untuk setiap skenario.
+    if (previousScore == null || validScore > previousScore) {
+      currentScores[scenarioId] = validScore;
+
+      await prefs.setString(
+        _keySimulationScores,
+        jsonEncode(currentScores),
+      );
     }
-    // Catat ke riwayat
-    await addScoreHistory(RiwayatSkorItem(
-      id: DateTime.now().millisecondsSinceEpoch.toString(),
-      judul: 'Simulasi: $scenarioId',
-      kategori: 'Simulasi',
-      skor: score,
-      skorMaksimal: 100,
-      tanggal: _formatTanggalSekarang(),
-      status: score >= 60 ? 'Lulus Aman' : 'Perlu Latihan',
-    ));
+
+    // Setiap percobaan tetap masuk ke riwayat.
+    final title = scenarioTitle?.trim().isNotEmpty == true
+        ? scenarioTitle!.trim()
+        : _formatScenarioTitle(scenarioId);
+
+    await addScoreHistory(
+      RiwayatSkorItem(
+        id: _generateHistoryId(),
+        judul: 'Simulasi: $title',
+        kategori: 'Simulasi',
+        skor: validScore,
+        skorMaksimal: 100,
+        tanggal: _formatTanggalSekarang(),
+        status: validScore >= 60
+            ? 'Lulus Aman'
+            : 'Perlu Latihan',
+      ),
+    );
   }
 
-  // ================= KUIS EVALUASI =================
+  // ================= NILAI KUIS =================
+
   static Future<Map<String, int>> getQuizScores() async {
     final prefs = await _getPrefs();
-    final jsonStr = prefs.getString(_keyQuizScores);
-    if (jsonStr != null) {
-      try {
-        final decoded = jsonDecode(jsonStr) as Map<String, dynamic>;
-        return decoded.map((k, v) => MapEntry(k, v as int));
-      } catch (_) {}
+    final jsonString = prefs.getString(_keyQuizScores);
+
+    if (jsonString == null) {
+      return {};
     }
-    return {'kuis_gempa': 90, 'kuis_kebakaran': 80};
+
+    try {
+      final decoded = jsonDecode(jsonString);
+
+      if (decoded is Map<String, dynamic>) {
+        final scores = <String, int>{};
+
+        decoded.forEach((key, value) {
+          if (value is num) {
+            scores[key] = value.toInt().clamp(0, 100);
+          }
+        });
+
+        return scores;
+      }
+    } catch (_) {
+      // Data tidak valid dianggap belum memiliki nilai.
+    }
+
+    return {};
   }
 
-  static Future<void> saveQuizScore(String kuisId, String judulKuis, int score) async {
+  static Future<void> saveQuizScore(
+    String kuisId,
+    String judulKuis,
+    int score,
+  ) async {
     final prefs = await _getPrefs();
-    final scores = await getQuizScores();
-    scores[kuisId] = score;
-    await prefs.setString(_keyQuizScores, jsonEncode(scores));
+    final validScore = score.clamp(0, 100);
 
-    // Catat ke riwayat
-    await addScoreHistory(RiwayatSkorItem(
-      id: DateTime.now().millisecondsSinceEpoch.toString(),
-      judul: judulKuis,
-      kategori: 'Kuis',
-      skor: score,
-      skorMaksimal: 100,
-      tanggal: _formatTanggalSekarang(),
-      status: score >= 75 ? 'Sangat Baik' : (score >= 60 ? 'Cukup Baik' : 'Perlu Remedial'),
-    ));
+    final scores = await getQuizScores();
+
+    // Nilai kuis menyimpan hasil pengerjaan terakhir.
+    scores[kuisId] = validScore;
+
+    await prefs.setString(
+      _keyQuizScores,
+      jsonEncode(scores),
+    );
+
+    await addScoreHistory(
+      RiwayatSkorItem(
+        id: _generateHistoryId(),
+        judul: judulKuis,
+        kategori: 'Kuis',
+        skor: validScore,
+        skorMaksimal: 100,
+        tanggal: _formatTanggalSekarang(),
+        status: validScore >= 75
+            ? 'Sangat Baik'
+            : validScore >= 60
+                ? 'Cukup Baik'
+                : 'Perlu Remedial',
+      ),
+    );
   }
 
   // ================= RIWAYAT NILAI =================
+
   static Future<List<RiwayatSkorItem>> getScoreHistory() async {
     final prefs = await _getPrefs();
-    final jsonStr = prefs.getString(_keyScoreHistory);
-    if (jsonStr != null) {
-      try {
-        final List<dynamic> list = jsonDecode(jsonStr) as List<dynamic>;
-        return list.map((e) => RiwayatSkorItem.fromMap(e as Map<String, dynamic>)).toList();
-      } catch (_) {}
+    final jsonString = prefs.getString(_keyScoreHistory);
+
+    if (jsonString == null) {
+      return [];
     }
-    // Default initial mock history
-    return [
-      const RiwayatSkorItem(
-        id: '1',
-        judul: 'Kuis 1: Prosedur Mitigasi Gempa Bumi',
-        kategori: 'Kuis',
-        skor: 90,
-        skorMaksimal: 100,
-        tanggal: '05 Okt 2026',
-        status: 'Sangat Baik',
-      ),
-      const RiwayatSkorItem(
-        id: '2',
-        judul: 'Kuis 2: Taktik Menghindari Asap APAR',
-        kategori: 'Kuis',
-        skor: 80,
-        skorMaksimal: 100,
-        tanggal: '06 Okt 2026',
-        status: 'Cukup Baik',
-      ),
-      const RiwayatSkorItem(
-        id: '3',
-        judul: 'Simulasi Gempa Bumi Lantai 3',
-        kategori: 'Simulasi',
-        skor: 85,
-        skorMaksimal: 100,
-        tanggal: '07 Okt 2026',
-        status: 'Lulus Aman',
-      ),
-    ];
+
+    try {
+      final decoded = jsonDecode(jsonString);
+
+      if (decoded is List) {
+        return decoded
+            .whereType<Map<String, dynamic>>()
+            .map((item) => RiwayatSkorItem.fromMap(item))
+            .toList();
+      }
+    } catch (_) {
+      // Data riwayat tidak valid dianggap kosong.
+    }
+
+    return [];
   }
 
-  static Future<void> addScoreHistory(RiwayatSkorItem item) async {
+  static Future<void> addScoreHistory(
+    RiwayatSkorItem item,
+  ) async {
     final prefs = await _getPrefs();
-    final currentList = await getScoreHistory();
-    currentList.insert(0, item);
-    final mapped = currentList.map((e) => e.toMap()).toList();
-    await prefs.setString(_keyScoreHistory, jsonEncode(mapped));
+    final currentHistory = await getScoreHistory();
+
+    currentHistory.insert(0, item);
+
+    // Batasi riwayat agar penyimpanan tidak terus membesar.
+    const maxHistoryItems = 100;
+
+    if (currentHistory.length > maxHistoryItems) {
+      currentHistory.removeRange(
+        maxHistoryItems,
+        currentHistory.length,
+      );
+    }
+
+    final mappedHistory =
+        currentHistory.map((item) => item.toMap()).toList();
+
+    await prefs.setString(
+      _keyScoreHistory,
+      jsonEncode(mappedHistory),
+    );
   }
 
-  // ================= TAS SIAGA CHECKLIST =================
+  // ================= TAS SIAGA =================
+
   static Future<List<String>> getTasSiagaChecked() async {
     final prefs = await _getPrefs();
-    return prefs.getStringList(_keyTasSiagaChecked) ?? ['air', 'senter', 'p3k', 'dokumen'];
+
+    return prefs.getStringList(_keyTasSiagaChecked) ?? [];
   }
 
-  static Future<void> saveTasSiagaChecked(List<String> checkedList) async {
+  static Future<void> saveTasSiagaChecked(
+    List<String> checkedList,
+  ) async {
     final prefs = await _getPrefs();
-    await prefs.setStringList(_keyTasSiagaChecked, checkedList);
+
+    await prefs.setStringList(
+      _keyTasSiagaChecked,
+      checkedList,
+    );
   }
 
-  // ================= PERHITUNGAN RATA-RATA & PROGRESS =================
+  // ================= RATA-RATA NILAI =================
+
   static Future<double> getRataRataNilai() async {
     final quizScores = await getQuizScores();
-    final simScores = await getSimulationScores();
+    final simulationScores = await getSimulationScores();
 
-    final allScores = <int>[...quizScores.values, ...simScores.values];
-    if (allScores.isEmpty) return 85.0;
+    final allScores = <int>[
+      ...quizScores.values,
+      ...simulationScores.values,
+    ];
+
+    if (allScores.isEmpty) {
+      return 0.0;
+    }
+
     final total = allScores.reduce((a, b) => a + b);
+
     return (total / allScores.length).roundToDouble();
   }
+
+  // ================= PROGRES PEMBELAJARAN =================
 
   static Future<double> getOverallProgress() async {
     final completedModules = await getCompletedModules();
     final quizScores = await getQuizScores();
-    final simScores = await getSimulationScores();
+    final simulationScores = await getSimulationScores();
 
-    // 4 Modul + 3 Kuis + 3 Simulasi = 10 total target
+    // Target aplikasi: 4 modul, 3 kuis, dan 3 simulasi.
     const totalTarget = 10;
-    final achieved = completedModules.length + quizScores.length + simScores.length;
-    final percent = (achieved / totalTarget).clamp(0.0, 1.0);
-    return percent;
+
+    final achieved =
+        completedModules.length +
+        quizScores.length +
+        simulationScores.length;
+
+    final progress = achieved / totalTarget;
+
+    return progress.clamp(0.0, 1.0).toDouble();
   }
 
-  // Reset Data (Pembersihan untuk demo ujian)
+  // ================= RESET DATA =================
+
   static Future<void> resetAllData() async {
     final prefs = await _getPrefs();
+
+    // PERHATIAN:
+    // prefs.clear() menghapus seluruh data SharedPreferences
+    // aplikasi, termasuk data lain yang mungkin disimpan di sana.
     await prefs.clear();
+  }
+
+  // ================= HELPER =================
+
+  static String _generateHistoryId() {
+    return '${DateTime.now().microsecondsSinceEpoch}';
+  }
+
+  static String _formatScenarioTitle(String scenarioId) {
+    switch (scenarioId) {
+      case 'gempa_kelas':
+        return 'Gempa Bumi di Kelas';
+      case 'kebakaran_lab':
+        return 'Kebakaran di Laboratorium';
+      case 'banjir_tanggul':
+        return 'Banjir di Tanggul';
+      default:
+        return scenarioId
+            .replaceAll('_', ' ')
+            .split(' ')
+            .map(
+              (word) => word.isEmpty
+                  ? word
+                  : '${word[0].toUpperCase()}${word.substring(1)}',
+            )
+            .join(' ');
+    }
   }
 
   static String _formatTanggalSekarang() {
     final now = DateTime.now();
-    return '${now.day.toString().padLeft(2, '0')}/${now.month.toString().padLeft(2, '0')}/${now.year}';
+
+    return '${now.day.toString().padLeft(2, '0')}/'
+        '${now.month.toString().padLeft(2, '0')}/'
+        '${now.year}';
   }
 }

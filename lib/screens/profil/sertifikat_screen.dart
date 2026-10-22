@@ -1,5 +1,5 @@
-import 'package:flutter/material.dart';
-import '../../models/user_profile_model.dart';
+import 'package:flutter/material.dart'; 
+import '../../models/user_profile_model.dart'; 
 import '../../services/storage_service.dart';
 
 class SertifikatScreen extends StatefulWidget {
@@ -11,7 +11,13 @@ class SertifikatScreen extends StatefulWidget {
 
 class _SertifikatScreenState extends State<SertifikatScreen> {
   UserProfile? _profile;
-  double _rataRata = 85.0;
+  double _rataRata = 0;
+
+  static const Color navy = Color(0xFF142744);
+  static const Color blue = Color(0xFF315DAB);
+  static const Color red = Color(0xFFD92535);
+  static const Color gold = Color(0xFFD6AD5B);
+  static const Color cream = Color(0xFFFFFEFA);
 
   @override
   void initState() {
@@ -22,200 +28,719 @@ class _SertifikatScreenState extends State<SertifikatScreen> {
   Future<void> _loadData() async {
     final prof = await StorageService.getUserProfile();
     final avg = await StorageService.getRataRataNilai();
-    if (mounted) {
-      setState(() {
-        _profile = prof;
-        _rataRata = avg;
-      });
-    }
+
+    if (!mounted) return;
+
+    setState(() {
+      _profile = prof;
+      _rataRata = avg;
+    });
+  }
+
+  String get _predikat {
+    if (_rataRata >= 90) return 'UNGGUL';
+    if (_rataRata >= 80) return 'SANGAT BAIK';
+    if (_rataRata >= 70) return 'BAIK';
+    if (_rataRata >= 60) return 'CUKUP';
+    return 'TERUS BELAJAR';
+  }
+
+  Color get _predikatColor {
+    if (_rataRata >= 70) return const Color(0xFF168566);
+    return const Color(0xFFD18A28);
   }
 
   @override
   Widget build(BuildContext context) {
-    if (_profile == null) {
-      return const Scaffold(body: Center(child: CircularProgressIndicator()));
-    }
-
     return Scaffold(
-      backgroundColor: const Color(0xFFF7F9FC),
+      backgroundColor: const Color(0xFFF0F3F9),
       appBar: AppBar(
-        title: const Text('Sertifikat Kelulusan', style: TextStyle(fontWeight: FontWeight.bold)),
-        backgroundColor: Colors.white,
-        foregroundColor: Colors.black87,
+        backgroundColor: const Color(0xFFF0F3F9),
+        foregroundColor: navy,
         elevation: 0,
+        title: const Text(
+          'Sertifikat Kelulusan',
+          style: TextStyle(
+            fontSize: 19,
+            fontWeight: FontWeight.w800,
+          ),
+        ),
       ),
-      body: SingleChildScrollView(
-        padding: const EdgeInsets.all(16.0),
-        child: Column(
-          children: [
-            // Frame Sertifikat
-            Container(
-              padding: const EdgeInsets.all(20),
-              decoration: BoxDecoration(
-                color: Colors.white,
-                borderRadius: BorderRadius.circular(16),
-                border: Border.all(color: Colors.amber.shade300, width: 3),
-                boxShadow: [
-                  BoxShadow(
-                    color: Colors.black.withValues(alpha: 0.06),
-                    blurRadius: 12,
-                    offset: const Offset(0, 4),
-                  ),
-                ],
-              ),
+      body: _profile == null
+          ? const Center(
+              child: CircularProgressIndicator(color: blue),
+            )
+          : SingleChildScrollView(
+              padding: const EdgeInsets.fromLTRB(14, 8, 14, 28),
               child: Column(
                 children: [
-                  // Logo & Header Sertifikat
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      Container(
-                        padding: const EdgeInsets.all(8),
-                        decoration: BoxDecoration(
-                          color: const Color(0xFFFFEBEE),
-                          shape: BoxShape.circle,
-                        ),
-                        child: const Icon(Icons.warning_amber_rounded, color: Colors.redAccent, size: 28),
-                      ),
-                      const SizedBox(width: 10),
-                      Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: const [
-                          Text(
-                            'DISASTER-X INDONESIA',
-                            style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13, letterSpacing: 1.2),
-                          ),
-                          Text(
-                            'Mobile Disaster Mitigation Academy',
-                            style: TextStyle(fontSize: 10, color: Colors.grey),
-                          ),
-                        ],
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 16),
-                  const Divider(thickness: 1.5, color: Color(0xFFFFE082)),
-                  const SizedBox(height: 12),
-
-                  const Text(
-                    'SERTIFIKAT KESIAPSIAGAAN BENCANA',
-                    textAlign: TextAlign.center,
-                    style: TextStyle(
-                      fontSize: 15,
-                      fontWeight: FontWeight.bold,
-                      letterSpacing: 1.2,
-                      color: Color(0xFFC2185B),
-                    ),
-                  ),
-                  const SizedBox(height: 8),
-                  const Text(
-                    'Diberikan dengan bangga kepada:',
-                    style: TextStyle(fontSize: 11, fontStyle: FontStyle.italic, color: Colors.grey),
-                  ),
-                  const SizedBox(height: 10),
-
-                  // Nama Siswa
-                  Text(
-                    _profile!.nama.toUpperCase(),
-                    textAlign: TextAlign.center,
-                    style: const TextStyle(
-                      fontSize: 18,
-                      fontWeight: FontWeight.bold,
-                      color: Colors.black87,
-                      decoration: TextDecoration.underline,
-                    ),
-                  ),
-                  const SizedBox(height: 4),
-                  Text(
-                    'NIM: ${_profile!.nim} • ${_profile!.sekolah}',
-                    textAlign: TextAlign.center,
-                    style: const TextStyle(fontSize: 12, color: Colors.black54),
-                  ),
-                  const SizedBox(height: 14),
-
-                  const Text(
-                    'Telah berhasil menyelesaikan seluruh rangkaian materi mitigasi prabencana, '
-                    'kuis evaluasi, dan simulasi skenario kegawatdaruratan adaptif dengan perolehan nilai:',
-                    textAlign: TextAlign.center,
-                    style: TextStyle(fontSize: 11, height: 1.4, color: Colors.black87),
-                  ),
-                  const SizedBox(height: 12),
-
-                  // Nilai & Predikat
-                  Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
-                    decoration: BoxDecoration(
-                      color: Colors.green.withValues(alpha: 0.1),
-                      borderRadius: BorderRadius.circular(10),
-                      border: Border.all(color: Colors.green.shade300),
-                    ),
-                    child: Text(
-                      'Rata-rata Skor: ${_rataRata.toStringAsFixed(0)} / 100 • Predikat: TANGGAP BENGGALA',
-                      style: const TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: Colors.green),
-                    ),
-                  ),
+                  _buildCertificate(),
                   const SizedBox(height: 20),
-
-                  // Cap & Tanda Tangan
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      Column(
-                        children: const [
-                          Icon(Icons.qr_code_2_rounded, size: 48, color: Colors.black54),
-                          Text('ID: DSX-2026-OKT', style: TextStyle(fontSize: 9, color: Colors.grey)),
-                        ],
-                      ),
-                      Column(
-                        children: const [
-                          Text('Bandar Lampung, 2026', style: TextStyle(fontSize: 10, color: Colors.grey)),
-                          SizedBox(height: 6),
-                          Icon(Icons.verified_rounded, color: Colors.blueAccent, size: 28),
-                          SizedBox(height: 4),
-                          Text(
-                            'Instruktur Mobile Programming',
-                            style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold),
+                  _buildScoreInfo(),
+                  const SizedBox(height: 18),
+                  SizedBox(
+                    width: double.infinity,
+                    height: 52,
+                    child: ElevatedButton.icon(
+                      onPressed: () {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          const SnackBar(
+                            content: Text(
+                              'Fitur ekspor PDF atau gambar belum diaktifkan.',
+                            ),
+                            behavior: SnackBarBehavior.floating,
                           ),
-                        ],
+                        );
+                      },
+                      icon: const Icon(Icons.download_rounded),
+                      label: const Text(
+                        'Unduh Sertifikat PDF / Gambar',
+                        style: TextStyle(
+                          fontWeight: FontWeight.w800,
+                          fontSize: 13,
+                        ),
                       ),
-                    ],
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: red,
+                        foregroundColor: Colors.white,
+                        elevation: 4,
+                        shadowColor: red.withValues(alpha: 0.25),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(15),
+                        ),
+                      ),
+                    ),
                   ),
                 ],
               ),
             ),
-            const SizedBox(height: 20),
+    );
+  }
 
-            // Tombol Unduh / Bagikan
-            SizedBox(
-              width: double.infinity,
-              height: 46,
-              child: ElevatedButton.icon(
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: Colors.redAccent,
-                  foregroundColor: Colors.white,
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+  Widget _buildCertificate() {
+    final profile = _profile!;
+
+    return Container(
+      padding: const EdgeInsets.all(5),
+      decoration: BoxDecoration(
+        gradient: const LinearGradient(
+          colors: [
+            Color(0xFFFFE8A6),
+            gold,
+            Color(0xFFB98632),
+            Color(0xFFFFE8A6),
+          ],
+        ),
+        borderRadius: BorderRadius.circular(19),
+        boxShadow: [
+          BoxShadow(
+            color: navy.withValues(alpha: 0.14),
+            blurRadius: 22,
+            offset: const Offset(0, 10),
+          ),
+        ],
+      ),
+      child: Container(
+        decoration: BoxDecoration(
+          color: cream,
+          borderRadius: BorderRadius.circular(15),
+          border: Border.all(color: gold, width: 1.2),
+        ),
+        child: ClipRRect(
+          borderRadius: BorderRadius.circular(14),
+          child: Stack(
+            children: [
+              // Background dekoratif
+              Positioned.fill(
+                child: CustomPaint(
+                  painter: _CertificateBackgroundPainter(),
                 ),
-                onPressed: () {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(
-                      content: Row(
-                        children: [
-                          Icon(Icons.download_done_rounded, color: Colors.white),
-                          SizedBox(width: 8),
-                          Text('Sertifikat berhasil diunduh ke memori perangkat!'),
+              ),
+
+              // Pita merah-biru sudut atas
+              Positioned(
+                top: 0,
+                left: 0,
+                child: _buildRibbon(isTop: true),
+              ),
+
+              // Pita merah-biru sudut bawah
+              Positioned(
+                bottom: 0,
+                right: 0,
+                child: _buildRibbon(isTop: false),
+              ),
+
+              Padding(
+                padding: const EdgeInsets.fromLTRB(17, 24, 17, 22),
+                child: Column(
+                  children: [
+                    // Logo asli DISASTER-X
+                    Row(
+                      crossAxisAlignment: CrossAxisAlignment.center,
+                      children: [
+                        Expanded(
+                          child: Image.asset(
+                            'assets/images/disasterlogo.png',
+                            height: 48,
+                            fit: BoxFit.contain,
+                            alignment: Alignment.centerLeft,
+                          ),
+                        ),
+                        const SizedBox(width: 8),
+                        const Flexible(
+                          child: Text(
+                            'MOBILE DISASTER\nMITIGATION ACADEMY',
+                            textAlign: TextAlign.right,
+                            style: TextStyle(
+                              color: navy,
+                              fontSize: 8,
+                              height: 1.6,
+                              fontWeight: FontWeight.w800,
+                              letterSpacing: 0.5,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+
+                    const SizedBox(height: 15),
+
+                    // Emblem
+                    Container(
+                      width: 69,
+                      height: 69,
+                      decoration: BoxDecoration(
+                        shape: BoxShape.circle,
+                        gradient: const LinearGradient(
+                          colors: [blue, navy],
+                          begin: Alignment.topLeft,
+                          end: Alignment.bottomRight,
+                        ),
+                        border: Border.all(color: gold, width: 3),
+                        boxShadow: [
+                          BoxShadow(
+                            color: navy.withValues(alpha: 0.15),
+                            blurRadius: 10,
+                            offset: const Offset(0, 4),
+                          ),
                         ],
                       ),
-                      backgroundColor: Colors.green,
+                      child: const Column(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Icon(
+                            Icons.shield_rounded,
+                            color: Color(0xFFFFD878),
+                            size: 33,
+                          ),
+                          Text(
+                            'DSX',
+                            style: TextStyle(
+                              color: Colors.white,
+                              fontWeight: FontWeight.w900,
+                              fontSize: 8,
+                              letterSpacing: 1.5,
+                            ),
+                          ),
+                        ],
+                      ),
                     ),
-                  );
-                },
-                icon: const Icon(Icons.download_rounded),
-                label: const Text('Unduh Sertifikat PDF / Gambar', style: TextStyle(fontWeight: FontWeight.bold)),
+
+                    const SizedBox(height: 16),
+
+                    const Text(
+                      'SERTIFIKAT',
+                      textAlign: TextAlign.center,
+                      style: TextStyle(
+                        fontSize: 27,
+                        height: 1.2,
+                        fontWeight: FontWeight.w900,
+                        letterSpacing: 2.1,
+                        color: navy,
+                      ),
+                    ),
+                    const SizedBox(height: 5),
+                    const Text(
+                      'KESIAPSIAGAAN BENCANA',
+                      textAlign: TextAlign.center,
+                      style: TextStyle(
+                        fontSize: 11,
+                        fontWeight: FontWeight.w900,
+                        letterSpacing: 1.3,
+                        color: red,
+                      ),
+                    ),
+
+                    const SizedBox(height: 17),
+
+                    Row(
+                      children: [
+                        const Expanded(
+                          child: Divider(color: gold, thickness: 1),
+                        ),
+                        Padding(
+                          padding: const EdgeInsets.symmetric(horizontal: 9),
+                          child: Icon(
+                            Icons.auto_awesome_rounded,
+                            color: gold,
+                            size: 17,
+                          ),
+                        ),
+                        const Expanded(
+                          child: Divider(color: gold, thickness: 1),
+                        ),
+                      ],
+                    ),
+
+                    const SizedBox(height: 16),
+
+                    const Text(
+                      'Diberikan dengan bangga kepada',
+                      textAlign: TextAlign.center,
+                      style: TextStyle(
+                        color: Color(0xFF7D8796),
+                        fontSize: 11,
+                        fontStyle: FontStyle.italic,
+                      ),
+                    ),
+                    const SizedBox(height: 10),
+
+                    Text(
+                      profile.nama.trim().isEmpty
+                          ? 'Nama Peserta'
+                          : profile.nama.trim(),
+                      textAlign: TextAlign.center,
+                      style: const TextStyle(
+                        color: navy,
+                        fontSize: 21,
+                        fontWeight: FontWeight.w900,
+                        height: 1.35,
+                      ),
+                    ),
+
+                    Container(
+                      height: 2,
+                      width: 115,
+                      margin: const EdgeInsets.only(top: 9, bottom: 11),
+                      decoration: BoxDecoration(
+                        gradient: const LinearGradient(
+                          colors: [gold, Color(0xFFFFE8A6), gold],
+                        ),
+                        borderRadius: BorderRadius.circular(5),
+                      ),
+                    ),
+
+                    Text(
+                      [
+                        if (profile.nim.trim().isNotEmpty)
+                          'NIM: ${profile.nim.trim()}',
+                        if (profile.sekolah.trim().isNotEmpty)
+                          profile.sekolah.trim(),
+                        if (profile.kelas.trim().isNotEmpty)
+                          'Kelas ${profile.kelas.trim()}',
+                      ].join('  •  '),
+                      textAlign: TextAlign.center,
+                      style: const TextStyle(
+                        color: Color(0xFF68768B),
+                        fontSize: 10,
+                        height: 1.7,
+                      ),
+                    ),
+
+                    const SizedBox(height: 19),
+
+                    const Text(
+                      'Telah mengikuti pembelajaran kesiapsiagaan dan '
+                      'mitigasi bencana melalui materi, kuis evaluasi, '
+                      'serta simulasi interaktif DISASTER-X.',
+                      textAlign: TextAlign.center,
+                      style: TextStyle(
+                        color: Color(0xFF47556A),
+                        fontSize: 11,
+                        height: 1.8,
+                      ),
+                    ),
+
+                    const SizedBox(height: 19),
+
+                    // Panel skor premium
+                    Container(
+                      width: double.infinity,
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 12,
+                        vertical: 14,
+                      ),
+                      decoration: BoxDecoration(
+                        gradient: const LinearGradient(
+                          colors: [navy, Color(0xFF254D82)],
+                          begin: Alignment.topLeft,
+                          end: Alignment.bottomRight,
+                        ),
+                        borderRadius: BorderRadius.circular(18),
+                        border: Border.all(color: gold, width: 2),
+                        boxShadow: [
+                          BoxShadow(
+                            color: navy.withValues(alpha: 0.15),
+                            blurRadius: 9,
+                            offset: const Offset(0, 4),
+                          ),
+                        ],
+                      ),
+                      child: Row(
+                        children: [
+                          const Icon(
+                            Icons.emoji_events_rounded,
+                            color: Color(0xFFFFD166),
+                            size: 35,
+                          ),
+                          const SizedBox(width: 10),
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                const Text(
+                                  'RATA-RATA SKOR',
+                                  style: TextStyle(
+                                    color: Color(0xFFD9E5FA),
+                                    fontSize: 8,
+                                    fontWeight: FontWeight.w800,
+                                    letterSpacing: 0.7,
+                                  ),
+                                ),
+                                const SizedBox(height: 3),
+                                Text(
+                                  '${_rataRata.toStringAsFixed(0)} / 100',
+                                  style: const TextStyle(
+                                    color: Colors.white,
+                                    fontSize: 23,
+                                    fontWeight: FontWeight.w900,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                          Container(
+                            width: 1,
+                            height: 42,
+                            color: Colors.white24,
+                          ),
+                          const SizedBox(width: 10),
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                const Text(
+                                  'PREDIKAT',
+                                  style: TextStyle(
+                                    color: Color(0xFFD9E5FA),
+                                    fontSize: 8,
+                                    fontWeight: FontWeight.w800,
+                                    letterSpacing: 0.7,
+                                  ),
+                                ),
+                                const SizedBox(height: 5),
+                                Text(
+                                  _predikat,
+                                  style: const TextStyle(
+                                    color: Color(0xFFFFD166),
+                                    fontSize: 12,
+                                    fontWeight: FontWeight.w900,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+
+                    const SizedBox(height: 21),
+
+                    const Text(
+                      'DISASTER-X  •  BELAJAR SIAP, BERTINDAK TEPAT',
+                      textAlign: TextAlign.center,
+                      style: TextStyle(
+                        color: navy,
+                        fontSize: 8,
+                        fontWeight: FontWeight.w900,
+                        letterSpacing: 0.5,
+                      ),
+                    ),
+
+                    const SizedBox(height: 17),
+
+                    Row(
+                      crossAxisAlignment: CrossAxisAlignment.end,
+                      children: [
+                        const Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Icon(
+                                Icons.verified_user_rounded,
+                                color: blue,
+                                size: 28,
+                              ),
+                              SizedBox(height: 5),
+                              Text(
+                                'DISASTER-X',
+                                style: TextStyle(
+                                  color: navy,
+                                  fontSize: 10,
+                                  fontWeight: FontWeight.w900,
+                                ),
+                              ),
+                              Text(
+                                'Digital Learning',
+                                style: TextStyle(
+                                  color: Color(0xFF8290A3),
+                                  fontSize: 9,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                        Column(
+                          crossAxisAlignment: CrossAxisAlignment.end,
+                          children: [
+                            const Icon(
+                              Icons.workspace_premium_rounded,
+                              color: gold,
+                              size: 28,
+                            ),
+                            const SizedBox(height: 5),
+                            const Text(
+                              'DIGITAL CERTIFICATE',
+                              style: TextStyle(
+                                color: navy,
+                                fontSize: 8,
+                                fontWeight: FontWeight.w900,
+                                letterSpacing: 0.4,
+                              ),
+                            ),
+                            Text(
+                              'Skor: ${_rataRata.toStringAsFixed(0)}',
+                              style: const TextStyle(
+                                color: Color(0xFF8290A3),
+                                fontSize: 9,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
               ),
-            ),
-          ],
+            ],
+          ),
         ),
       ),
     );
   }
+
+  Widget _buildRibbon({required bool isTop}) {
+    return SizedBox(
+      width: 100,
+      height: 100,
+      child: Stack(
+        children: [
+          Positioned(
+            top: isTop ? -33 : null,
+            bottom: isTop ? null : -33,
+            left: isTop ? -33 : null,
+            right: isTop ? null : -33,
+            child: Transform.rotate(
+              angle: isTop ? -0.785398 : 2.35619,
+              child: Container(
+                width: 145,
+                height: 25,
+                decoration: BoxDecoration(
+                  gradient: const LinearGradient(
+                    colors: [navy, blue],
+                  ),
+                  boxShadow: [
+                    BoxShadow(
+                      color: navy.withValues(alpha: 0.15),
+                      blurRadius: 5,
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ),
+          Positioned(
+            top: isTop ? 0 : null,
+            bottom: isTop ? null : 0,
+            left: isTop ? 0 : null,
+            right: isTop ? null : 0,
+            child: Transform.rotate(
+              angle: isTop ? -0.785398 : 2.35619,
+              child: Container(
+                width: 115,
+                height: 13,
+                decoration: const BoxDecoration(
+                  gradient: LinearGradient(
+                    colors: [red, Color(0xFFAA1726)],
+                  ),
+                ),
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildScoreInfo() {
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(17),
+        border: Border.all(color: const Color(0xFFE4EAF3)),
+      ),
+      child: Row(
+        children: [
+          Container(
+            width: 44,
+            height: 44,
+            decoration: BoxDecoration(
+              color: const Color(0xFFEAF0FF),
+              borderRadius: BorderRadius.circular(13),
+            ),
+            child: const Icon(
+              Icons.analytics_rounded,
+              color: blue,
+              size: 23,
+            ),
+          ),
+          const SizedBox(width: 12),
+          const Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'Pencapaian Belajarmu',
+                  style: TextStyle(
+                    color: navy,
+                    fontSize: 13,
+                    fontWeight: FontWeight.w800,
+                  ),
+                ),
+                SizedBox(height: 4),
+                Text(
+                  'Rata-rata nilai dari data yang tersimpan',
+                  style: TextStyle(
+                    color: Color(0xFF8290A3),
+                    fontSize: 10,
+                  ),
+                ),
+              ],
+            ),
+          ),
+          Text(
+            _rataRata.toStringAsFixed(0),
+            style: TextStyle(
+              color: _predikatColor,
+              fontSize: 25,
+              fontWeight: FontWeight.w900,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
 }
+
+class _CertificateBackgroundPainter extends CustomPainter {
+  @override
+  void paint(Canvas canvas, Size size) {
+    final goldPaint = Paint()
+      ..color = const Color(0xFFD6AD5B).withValues(alpha: 0.15)
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = 0.8;
+
+    final bluePaint = Paint()
+      ..color = const Color(0xFF315DAB).withValues(alpha: 0.055)
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = 1;
+
+    // Garis kontur dekoratif di bagian atas dan bawah.
+    for (int i = 0; i < 7; i++) {
+      final offset = i * 9.0;
+
+      final topPath = Path()
+        ..moveTo(size.width * 0.35 + offset, 0)
+        ..quadraticBezierTo(
+          size.width * 0.65,
+          35 + offset,
+          size.width,
+          12 + offset,
+        );
+
+      canvas.drawPath(topPath, bluePaint);
+
+      final bottomPath = Path()
+        ..moveTo(0, size.height - offset)
+        ..quadraticBezierTo(
+          size.width * 0.35,
+          size.height - 45 - offset,
+          size.width * 0.65,
+          size.height - 12 - offset,
+        );
+
+      canvas.drawPath(bottomPath, goldPaint);
+    }
+
+    // Pola titik halus pada area samping.
+    final dotPaint = Paint()
+      ..color = const Color(0xFF315DAB).withValues(alpha: 0.07);
+
+    for (int row = 0; row < 7; row++) {
+      for (int col = 0; col < 4; col++) {
+        canvas.drawCircle(
+          Offset(
+            size.width - 16 - col * 8.0,
+            size.height * 0.34 + row * 8.0,
+          ),
+          1.2,
+          dotPaint,
+        );
+
+        canvas.drawCircle(
+          Offset(
+            16 + col * 8.0,
+            size.height * 0.68 + row * 8.0,
+          ),
+          1.2,
+          dotPaint,
+        );
+      }
+    }
+
+      // Bingkai dalam.
+    final borderPaint = Paint()
+      ..color = const Color(0xFFD6AD5B).withValues(alpha: 0.35)
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = 0.8;
+
+    canvas.drawRRect(
+      RRect.fromRectAndRadius(
+        Rect.fromLTWH(
+          8,
+          8,
+          size.width - 16,
+          size.height - 16,
+        ),
+        const Radius.circular(10),
+      ),
+      borderPaint,
+    );
+  }
+
+  @override
+  bool shouldRepaint(covariant CustomPainter oldDelegate) => false;
+}
+

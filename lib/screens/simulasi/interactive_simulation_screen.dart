@@ -26,13 +26,14 @@ class _InteractiveSimulationScreenState extends State<InteractiveSimulationScree
   final Set<int> _triggeredCheckpoints = {};
 
   // Mode Tampilan: Animasi Interaktif (Canvas) vs Video Player MP4
-  bool _useVideoPlayerMode = false;
+  bool _useVideoPlayerMode = true; // Default langsung video MP4
   VideoPlayerController? _videoController;
+  bool _isVideoInitialized = false;
 
-  // Animasi Controller untuk efek visual simulasi
-  late AnimationController _shakeAnimController; // Efek guncangan gempa
-  late AnimationController _pulseAnimController; // Efek kedip sirine darurat
-  late AnimationController _waveAnimController;  // Efek ombak air banjir
+  // Animasi Controller untuk efek visual simulasi (Canvas 2D)
+  late AnimationController _shakeAnimController;
+  late AnimationController _pulseAnimController;
+  late AnimationController _waveAnimController;
 
   @override
   void initState() {
@@ -40,7 +41,7 @@ class _InteractiveSimulationScreenState extends State<InteractiveSimulationScree
     _totalSeconds = widget.skenario.totalDetik;
     _eventLogs.add(widget.skenario.prolog);
 
-    // Inisialisasi controller animasi
+    // Inisialisasi controller animasi canvas
     _shakeAnimController = AnimationController(
       vsync: this,
       duration: const Duration(milliseconds: 100),
@@ -56,7 +57,26 @@ class _InteractiveSimulationScreenState extends State<InteractiveSimulationScree
       duration: const Duration(milliseconds: 1500),
     )..repeat();
 
+    // Inisialisasi Video Player
+    _initVideoPlayer();
+
     _startSimulation();
+  }
+
+  void _initVideoPlayer() {
+    _videoController = VideoPlayerController.asset('assets/videos/gempa_simulasi.mp4')
+      ..initialize().then((_) {
+        if (mounted) {
+          setState(() {
+            _isVideoInitialized = true;
+          });
+          if (_isPlaying) {
+            _videoController?.play();
+          }
+        }
+      }).catchError((error) {
+        debugPrint("Video Player Error: $error");
+      });
   }
 
   void _startSimulation() {
@@ -64,34 +84,34 @@ class _InteractiveSimulationScreenState extends State<InteractiveSimulationScree
       _isPlaying = true;
     });
 
-    if (widget.skenario.id == 'gempa_kelas' && _currentSeconds >= 12 && _currentSeconds < 32) {
-      _shakeAnimController.repeat(reverse: true);
+    if (_useVideoPlayerMode && _videoController != null && _isVideoInitialized) {
+      _videoController?.play();
     }
 
-    _timer = Timer.periodic(const Duration(seconds: 1), (timer) {
+    _timer = Timer.periodic(const Duration(milliseconds: 500), (timer) {
       if (_currentSeconds >= _totalSeconds) {
         _timer?.cancel();
         _shakeAnimController.stop();
+        _videoController?.pause();
         _onSimulationCompleted();
       } else {
-        setState(() {
-          _currentSeconds++;
-        });
-
-        // Trigger animasi gempa saat gempa aktif
-        if (widget.skenario.id == 'gempa_kelas') {
-          if (_currentSeconds >= 12 && _currentSeconds <= 30) {
-            if (!_shakeAnimController.isAnimating) {
-              _shakeAnimController.repeat(reverse: true);
-            }
-          } else {
-            _shakeAnimController.stop();
+        // Update detik berdasarkan posisi riil video MP4
+        if (_useVideoPlayerMode && _videoController != null && _isVideoInitialized) {
+          final videoPos = _videoController!.value.position.inSeconds;
+          if (videoPos != _currentSeconds) {
+            setState(() {
+              _currentSeconds = videoPos;
+            });
           }
+        } else {
+          setState(() {
+            _currentSeconds++;
+          });
         }
 
-        // Cek checkpoint
+        // Cek Trigger Checkpoint
         for (final cp in widget.skenario.checkpoints) {
-          if (_currentSeconds == cp.detik && !_triggeredCheckpoints.contains(cp.detik)) {
+          if (_currentSeconds >= cp.detik && !_triggeredCheckpoints.contains(cp.detik)) {
             _triggeredCheckpoints.add(cp.detik);
             _pauseAndTriggerCheckpoint(cp);
             break;
@@ -119,7 +139,7 @@ class _InteractiveSimulationScreenState extends State<InteractiveSimulationScree
       _isPlaying = true;
     });
 
-    if (_useVideoPlayerMode && _videoController != null && _videoController!.value.isInitialized) {
+    if (_useVideoPlayerMode && _videoController != null && _isVideoInitialized) {
       _videoController?.play();
     }
 
@@ -321,8 +341,8 @@ class _InteractiveSimulationScreenState extends State<InteractiveSimulationScree
               const SizedBox(height: 6),
               Text(
                 isPassed
-                    ? 'Luar biasa! Keputusan keselamatan yang kamu ambil tepat sasaran dan mengurangi risiko bencana.'
-                    : 'Skor keselamatan di bawah batas aman (60%). Jangan panik, pelajari kembali modul materi dan coba lagi.',
+                    ? 'Luar biasa! Keputusan keselamatan yang kamu ambil tepat sasaran.'
+                    : 'Skor keselamatan di bawah batas aman (60%). Coba pelajari materi dan ulangi lagi.',
                 textAlign: TextAlign.center,
                 style: const TextStyle(fontSize: 12, color: Colors.grey, height: 1.3),
               ),
@@ -361,6 +381,9 @@ class _InteractiveSimulationScreenState extends State<InteractiveSimulationScree
                   _eventLogs.clear();
                   _eventLogs.add(widget.skenario.prolog);
                 });
+                if (_videoController != null && _isVideoInitialized) {
+                  _videoController?.seekTo(Duration.zero);
+                }
                 _startSimulation();
               },
               child: const Text('Ulangi Simulasi'),
@@ -396,394 +419,546 @@ class _InteractiveSimulationScreenState extends State<InteractiveSimulationScree
   @override
   Widget build(BuildContext context) {
     final themeColor = Color(widget.skenario.warnaHex);
+    final progress = _totalSeconds > 0
+        ? (_currentSeconds / _totalSeconds).clamp(0.0, 1.0).toDouble()
+        : 0.0;
 
     return Scaffold(
-      backgroundColor: const Color(0xFF161622),
+      backgroundColor: const Color(0xFFF3F6FB),
       appBar: AppBar(
-        title: Text(widget.skenario.judul, style: const TextStyle(fontSize: 14, fontWeight: FontWeight.bold)),
-        backgroundColor: const Color(0xFF161622),
+        backgroundColor: const Color(0xFF172B4D),
         foregroundColor: Colors.white,
         elevation: 0,
+        titleSpacing: 4,
+        title: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              widget.skenario.judul,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w800),
+            ),
+            const SizedBox(height: 2),
+            const Text(
+              'SIMULASI TANGGAP BENCANA',
+              style: TextStyle(
+                fontSize: 9,
+                letterSpacing: 1.0,
+                color: Colors.white70,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+          ],
+        ),
         actions: [
-          // Switch mode antara Animasi Canvas Interaktif dan Video Player MP4
-          TextButton.icon(
-            style: TextButton.styleFrom(foregroundColor: Colors.white70),
-            icon: Icon(_useVideoPlayerMode ? Icons.animation_rounded : Icons.videocam_rounded, size: 18),
-            label: Text(_useVideoPlayerMode ? 'Animasi Canvas' : 'Video MP4', style: const TextStyle(fontSize: 11)),
-            onPressed: () {
+          PopupMenuButton<bool>(
+            tooltip: 'Mode tampilan',
+            icon: const Icon(Icons.tune_rounded, size: 21),
+            onSelected: (useVideo) {
               setState(() {
-                _useVideoPlayerMode = !_useVideoPlayerMode;
+                _useVideoPlayerMode = useVideo;
               });
-              if (_useVideoPlayerMode && _videoController == null) {
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(
-                    content: Text('Mode Video MP4 aktif. Jika belum ada file mp4 lokal, kanvas simulasi animasi tetap menjadi acuan visual.'),
-                    duration: Duration(seconds: 2),
-                  ),
-                );
+              if (useVideo) {
+                if (_videoController != null && _isVideoInitialized) {
+                  _videoController!.seekTo(Duration(seconds: _currentSeconds));
+                  if (_isPlaying) _videoController!.play();
+                }
+              } else {
+                _videoController?.pause();
               }
             },
-          ),
-        ],
-      ),
-      body: Column(
-        children: [
-          // ================= VIEWPORT ANIMASI INTERAKTIF =================
-          Expanded(
-            flex: 5,
-            child: Container(
-              width: double.infinity,
-              color: Colors.black,
-              child: Stack(
-                alignment: Alignment.center,
-                children: [
-                  // Kanvas Animasi Grafis Dinamis Berdasarkan Bencana
-                  _buildAnimatedCanvas(),
-
-                  // Badge Live / Status Auto-Pause
-                  Positioned(
-                    top: 16,
-                    left: 16,
-                    child: Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                      decoration: BoxDecoration(
-                        color: _isPlaying ? Colors.redAccent : Colors.amber.shade700,
-                        borderRadius: BorderRadius.circular(6),
-                      ),
-                      child: Text(
-                        _isPlaying ? 'ANIMASI AKTIF (PLAYING)' : 'PAUSED (AUTO-CHECKPOINT)',
-                        style: const TextStyle(color: Colors.white, fontSize: 10, fontWeight: FontWeight.bold),
-                      ),
-                    ),
-                  ),
-
-                  // Floating Safety Score
-                  Positioned(
-                    top: 16,
-                    right: 16,
-                    child: Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                      decoration: BoxDecoration(
-                        color: Colors.black.withValues(alpha: 0.65),
-                        borderRadius: BorderRadius.circular(20),
-                        border: Border.all(color: Colors.white24),
-                      ),
-                      child: Row(
-                        children: [
-                          Icon(
-                            Icons.shield_rounded,
-                            color: _safetyScore >= 60 ? Colors.greenAccent : Colors.redAccent,
-                            size: 16,
-                          ),
-                          const SizedBox(width: 6),
-                          Text(
-                            'Safety Score: $_safetyScore',
-                            style: const TextStyle(color: Colors.white, fontSize: 11, fontWeight: FontWeight.bold),
-                          ),
-                        ],
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          ),
-
-          // ================= AREA LOG KEJADIAN & KONTROL =================
-          Expanded(
-            flex: 5,
-            child: Container(
-              padding: const EdgeInsets.all(20),
-              decoration: const BoxDecoration(
-                color: Colors.white,
-                borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
-              ),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      const Text('Catatan & Status Kejadian', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14)),
-                      Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
-                        decoration: BoxDecoration(
-                          color: Colors.redAccent.withValues(alpha: 0.1),
-                          borderRadius: BorderRadius.circular(6),
-                        ),
-                        child: Text(
-                          'Detik 00:${_currentSeconds.toString().padLeft(2, '0')} / 00:$_totalSeconds',
-                          style: const TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: Colors.redAccent),
-                        ),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 8),
-
-                  // Daftar Log Kejadian Skenario
-                  Expanded(
-                    child: ListView.builder(
-                      itemCount: _eventLogs.length,
-                      itemBuilder: (context, index) {
-                        return Container(
-                          margin: const EdgeInsets.only(bottom: 6),
-                          padding: const EdgeInsets.all(10),
-                          decoration: BoxDecoration(
-                            color: const Color(0xFFF7F9FC),
-                            borderRadius: BorderRadius.circular(8),
-                            border: Border.all(color: Colors.grey.shade200),
-                          ),
-                          child: Text(
-                            _eventLogs[index],
-                            style: const TextStyle(fontSize: 12, color: Colors.black87, height: 1.3),
-                          ),
-                        );
-                      },
-                    ),
-                  ),
-
-                  const SizedBox(height: 10),
-                  // Progress Bar Waktu
-                  ClipRRect(
-                    borderRadius: BorderRadius.circular(8),
-                    child: LinearProgressIndicator(
-                      value: _totalSeconds > 0 ? (_currentSeconds / _totalSeconds) : 0,
-                      backgroundColor: Colors.grey.shade200,
-                      valueColor: AlwaysStoppedAnimation<Color>(themeColor),
-                      minHeight: 6,
-                    ),
-                  ),
-                  const SizedBox(height: 14),
-
-                  // Tombol Keluar dari Simulasi
-                  SizedBox(
-                    width: double.infinity,
-                    height: 44,
-                    child: ElevatedButton.icon(
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: Colors.redAccent,
-                        foregroundColor: Colors.white,
-                        elevation: 0,
-                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-                      ),
-                      onPressed: () {
-                        Navigator.pop(context);
-                      },
-                      icon: const Icon(Icons.exit_to_app_rounded, size: 18),
-                      label: const Text('Keluar dari Simulasi', style: TextStyle(fontWeight: FontWeight.bold)),
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  /// Membangun kanvas visual animasi sesuai jenis bencana skenario
-  Widget _buildAnimatedCanvas() {
-    final String scenarioId = widget.skenario.id;
-
-    if (scenarioId == 'gempa_kelas') {
-      return _buildGempaAnimation();
-    } else if (scenarioId == 'kebakaran_lab') {
-      return _buildKebakaranAnimation();
-    } else {
-      return _buildBanjirAnimation();
-    }
-  }
-
-  // ================= ANIMASI SKENARIO 1: GEMPA BUMI =================
-  Widget _buildGempaAnimation() {
-    final bool isQuakeActive = _currentSeconds >= 12 && _currentSeconds <= 30;
-    final bool isEvacuating = _currentSeconds > 30;
-
-    return AnimatedBuilder(
-      animation: _shakeAnimController,
-      builder: (context, child) {
-        // Efek getar layar menggunakan translate offsetX & offsetY
-        final double shakeOffset = isQuakeActive ? (_shakeAnimController.value * 12.0 - 6.0) : 0.0;
-
-        return Transform.translate(
-          offset: Offset(shakeOffset, isQuakeActive ? (shakeOffset / 2) : 0),
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              // Efek Lampu Darurat Berkedip
-              if (isQuakeActive)
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.center,
+            itemBuilder: (context) => const [
+              PopupMenuItem<bool>(
+                value: true,
+                child: Row(
                   children: [
-                    FadeTransition(
-                      opacity: _pulseAnimController,
-                      child: const Icon(Icons.emergency_rounded, color: Colors.amber, size: 28),
-                    ),
-                    const SizedBox(width: 8),
-                    const Text(
-                      'PERINGATAN: GUNCANGAN GEMPA AKTIF',
-                      style: TextStyle(color: Colors.amber, fontWeight: FontWeight.bold, fontSize: 13, letterSpacing: 1),
-                    ),
+                    Icon(Icons.videocam_rounded, size: 19),
+                    SizedBox(width: 10),
+                    Text('Video MP4'),
                   ],
                 ),
-              const SizedBox(height: 14),
-
-              // Ikon Situasi Ruang Kelas
-              Stack(
-                alignment: Alignment.center,
-                children: [
-                  Container(
-                    width: 130,
-                    height: 130,
-                    decoration: BoxDecoration(
-                      shape: BoxShape.circle,
-                      color: isQuakeActive ? Colors.redAccent.withValues(alpha: 0.15) : Colors.white10,
-                    ),
-                  ),
-                  Icon(
-                    isEvacuating
-                        ? Icons.directions_run_rounded
-                        : (isQuakeActive ? Icons.table_restaurant_rounded : Icons.apartment_rounded),
-                    size: 80,
-                    color: isQuakeActive ? Colors.amberAccent : Colors.white70,
-                  ),
-                ],
               ),
-              const SizedBox(height: 14),
-
-              Text(
-                isEvacuating
-                    ? 'Tahap Evakuasi: Menuju Tangga Darurat'
-                    : (isQuakeActive ? '⚠️ Puing Berjatuhan! Berlindung di Bawah Meja' : 'Suasana Pembelajaran di Kelas (Lantai 3)'),
-                style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 14),
-              ),
-              const SizedBox(height: 6),
-              Text(
-                'Skenario: Ruang Kelas SMA • Animasi 2D Interaktif',
-                style: TextStyle(color: Colors.white.withValues(alpha: 0.6), fontSize: 11),
+              PopupMenuItem<bool>(
+                value: false,
+                child: Row(
+                  children: [
+                    Icon(Icons.animation_rounded, size: 19),
+                    SizedBox(width: 10),
+                    Text('Animasi Canvas'),
+                  ],
+                ),
               ),
             ],
           ),
-        );
-      },
-    );
-  }
-
-  // ================= ANIMASI SKENARIO 2: KEBAKARAN LAB =================
-  Widget _buildKebakaranAnimation() {
-    final bool isFireActive = _currentSeconds >= 12;
-
-    return Column(
-      mainAxisAlignment: MainAxisAlignment.center,
-      children: [
-        if (isFireActive)
-          FadeTransition(
-            opacity: _pulseAnimController,
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: const [
-                Icon(Icons.local_fire_department_rounded, color: Colors.redAccent, size: 24),
-                SizedBox(width: 6),
-                Text(
-                  'BAHAYA API & ASAP TEBAL DI LABORATORIUM',
-                  style: TextStyle(color: Colors.redAccent, fontWeight: FontWeight.bold, fontSize: 12),
-                ),
-              ],
-            ),
-          ),
-        const SizedBox(height: 14),
-
-        Stack(
-          alignment: Alignment.center,
+          const SizedBox(width: 4),
+        ],
+      ),
+      body: SafeArea(
+        top: false,
+        child: Column(
           children: [
-            Container(
-              width: 130,
-              height: 130,
-              decoration: BoxDecoration(
-                shape: BoxShape.circle,
-                color: isFireActive ? Colors.deepOrange.withValues(alpha: 0.2) : Colors.white10,
+            Expanded(
+              flex: 6,
+              child: Container(
+                width: double.infinity,
+                color: const Color(0xFF10131A),
+                child: Stack(
+                  alignment: Alignment.center,
+                  children: [
+                    if (_useVideoPlayerMode)
+                      (_isVideoInitialized && _videoController != null)
+                          ? Center(
+                              child: AspectRatio(
+                                aspectRatio: _videoController!.value.aspectRatio,
+                                child: VideoPlayer(_videoController!),
+                              ),
+                            )
+                          : const Column(
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              children: [
+                                CircularProgressIndicator(
+                                  color: Color(0xFF78A6FF),
+                                  strokeWidth: 3,
+                                ),
+                                SizedBox(height: 14),
+                                Text(
+                                  'Menyiapkan simulasi...',
+                                  style: TextStyle(
+                                    color: Colors.white70,
+                                    fontSize: 12,
+                                  ),
+                                ),
+                              ],
+                            )
+                    else
+                      _buildAnimatedCanvas(),
+                    Positioned(
+                      top: 14,
+                      left: 14,
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 10,
+                          vertical: 7,
+                        ),
+                        decoration: BoxDecoration(
+                          color: _isPlaying
+                              ? const Color(0xFFE84D5B)
+                              : const Color(0xFFE0A12D),
+                          borderRadius: BorderRadius.circular(9),
+                        ),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Icon(
+                              _isPlaying
+                                  ? Icons.fiber_manual_record_rounded
+                                  : Icons.pause_circle_filled_rounded,
+                              color: Colors.white,
+                              size: 12,
+                            ),
+                            const SizedBox(width: 5),
+                            Text(
+                              _isPlaying ? 'SEDANG BERJALAN' : 'DIJEDA',
+                              style: const TextStyle(
+                                color: Colors.white,
+                                fontSize: 9,
+                                fontWeight: FontWeight.w800,
+                                letterSpacing: 0.3,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                    Positioned(
+                      top: 14,
+                      right: 14,
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 11,
+                          vertical: 8,
+                        ),
+                        decoration: BoxDecoration(
+                          color: const Color(0xE8172438),
+                          borderRadius: BorderRadius.circular(12),
+                          border: Border.all(color: Colors.white24),
+                        ),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            const Icon(
+                              Icons.shield_rounded,
+                              color: Color(0xFFFFC857),
+                              size: 16,
+                            ),
+                            const SizedBox(width: 6),
+                            Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                const Text(
+                                  'SAFETY SCORE',
+                                  style: TextStyle(
+                                    color: Colors.white70,
+                                    fontSize: 8,
+                                    fontWeight: FontWeight.w700,
+                                    letterSpacing: 0.5,
+                                  ),
+                                ),
+                                Text(
+                                  '$_safetyScore / 100',
+                                  style: const TextStyle(
+                                    color: Colors.white,
+                                    fontSize: 12,
+                                    fontWeight: FontWeight.w800,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                    if (!_isPlaying && _currentSeconds < _totalSeconds)
+                      Container(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 13,
+                          vertical: 9,
+                        ),
+                        decoration: BoxDecoration(
+                          color: Colors.black.withValues(alpha: 0.62),
+                          borderRadius: BorderRadius.circular(30),
+                          border: Border.all(color: Colors.white24),
+                        ),
+                        child: const Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Icon(Icons.pause_rounded, color: Colors.white, size: 17),
+                            SizedBox(width: 6),
+                            Text(
+                              'Menunggu keputusanmu',
+                              style: TextStyle(
+                                color: Colors.white,
+                                fontSize: 11,
+                                fontWeight: FontWeight.w600,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    Positioned(
+                      bottom: 0,
+                      left: 0,
+                      right: 0,
+                      child: Container(
+                        height: 4,
+                        color: Colors.white.withValues(alpha: 0.15),
+                        alignment: Alignment.centerLeft,
+                        child: FractionallySizedBox(
+                          widthFactor: progress,
+                          child: Container(color: const Color(0xFF78A6FF)),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
               ),
             ),
-            Icon(
-              isFireActive ? Icons.local_fire_department_rounded : Icons.computer_rounded,
-              size: 80,
-              color: isFireActive ? Colors.deepOrangeAccent : Colors.white70,
+            Expanded(
+              flex: 5,
+              child: Container(
+                width: double.infinity,
+                padding: const EdgeInsets.fromLTRB(18, 17, 18, 12),
+                decoration: const BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.vertical(top: Radius.circular(25)),
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      children: [
+                        Container(
+                          width: 37,
+                          height: 37,
+                          decoration: BoxDecoration(
+                            color: const Color(0xFFEAF1FF),
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                          child: const Icon(
+                            Icons.radar_rounded,
+                            color: Color(0xFF3478F6),
+                            size: 21,
+                          ),
+                        ),
+                        const SizedBox(width: 10),
+                        const Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                'Pusat Informasi',
+                                style: TextStyle(
+                                  color: Color(0xFF172B4D),
+                                  fontSize: 15,
+                                  fontWeight: FontWeight.w800,
+                                ),
+                              ),
+                              SizedBox(height: 2),
+                              Text(
+                                'Pantau perkembangan kejadian',
+                                style: TextStyle(
+                                  color: Color(0xFF8290A4),
+                                  fontSize: 10,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                        Container(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 9,
+                            vertical: 7,
+                          ),
+                          decoration: BoxDecoration(
+                            color: const Color(0xFFF1F4F9),
+                            borderRadius: BorderRadius.circular(10),
+                          ),
+                          child: Text(
+                            '${_formatTime(_currentSeconds)} / ${_formatTime(_totalSeconds)}',
+                            style: const TextStyle(
+                              color: Color(0xFF536783),
+                              fontSize: 10,
+                              fontWeight: FontWeight.w800,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 14),
+                    Row(
+                      children: [
+                        const Text(
+                          'CATATAN KEJADIAN',
+                          style: TextStyle(
+                            color: Color(0xFF8290A4),
+                            fontSize: 9,
+                            fontWeight: FontWeight.w800,
+                            letterSpacing: 0.8,
+                          ),
+                        ),
+                        const Spacer(),
+                        Container(
+                          width: 6,
+                          height: 6,
+                          decoration: BoxDecoration(
+                            color: _isPlaying
+                                ? const Color(0xFF36B37E)
+                                : const Color(0xFFE0A12D),
+                            shape: BoxShape.circle,
+                          ),
+                        ),
+                        const SizedBox(width: 5),
+                        Text(
+                          _isPlaying ? 'Live' : 'Menunggu',
+                          style: const TextStyle(
+                            color: Color(0xFF536783),
+                            fontSize: 10,
+                            fontWeight: FontWeight.w700,
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 8),
+                    Expanded(
+                      child: _eventLogs.isEmpty
+                          ? const Center(
+                              child: Text(
+                                'Belum ada catatan kejadian.',
+                                style: TextStyle(
+                                  color: Color(0xFF8290A4),
+                                  fontSize: 12,
+                                ),
+                              ),
+                            )
+                          : ListView.builder(
+                              padding: EdgeInsets.zero,
+                              itemCount: _eventLogs.length,
+                              itemBuilder: (context, index) {
+                                final isLatest = index == 0;
+                                return Container(
+                                  margin: const EdgeInsets.only(bottom: 7),
+                                  padding: const EdgeInsets.all(11),
+                                  decoration: BoxDecoration(
+                                    color: isLatest
+                                        ? const Color(0xFFF1F5FC)
+                                        : const Color(0xFFF8FAFD),
+                                    borderRadius: BorderRadius.circular(12),
+                                    border: Border.all(
+                                      color: isLatest
+                                          ? const Color(0xFFDCE7FA)
+                                          : const Color(0xFFEDF1F6),
+                                    ),
+                                  ),
+                                  child: Row(
+                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                    children: [
+                                      Icon(
+                                        isLatest
+                                            ? Icons.notifications_active_rounded
+                                            : Icons.check_circle_outline_rounded,
+                                        color: isLatest
+                                            ? const Color(0xFF3478F6)
+                                            : const Color(0xFF9AA7B8),
+                                        size: 16,
+                                      ),
+                                      const SizedBox(width: 8),
+                                      Expanded(
+                                        child: Text(
+                                          _eventLogs[index],
+                                          style: TextStyle(
+                                            color: const Color(0xFF34445D),
+                                            fontSize: 11,
+                                            height: 1.45,
+                                            fontWeight: isLatest
+                                                ? FontWeight.w600
+                                                : FontWeight.w400,
+                                          ),
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                );
+                              },
+                            ),
+                    ),
+                    const SizedBox(height: 9),
+                    Row(
+                      children: [
+                        const Icon(
+                          Icons.flag_rounded,
+                          color: Color(0xFF3478F6),
+                          size: 15,
+                        ),
+                        const SizedBox(width: 6),
+                        const Text(
+                          'Progres simulasi',
+                          style: TextStyle(
+                            color: Color(0xFF536783),
+                            fontSize: 10,
+                            fontWeight: FontWeight.w700,
+                          ),
+                        ),
+                        const Spacer(),
+                        Text(
+                          '${(progress * 100).round()}%',
+                          style: const TextStyle(
+                            color: Color(0xFF172B4D),
+                            fontSize: 10,
+                            fontWeight: FontWeight.w800,
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 7),
+                    ClipRRect(
+                      borderRadius: BorderRadius.circular(20),
+                      child: LinearProgressIndicator(
+                        value: progress,
+                        backgroundColor: const Color(0xFFE9EEF6),
+                        valueColor: AlwaysStoppedAnimation<Color>(themeColor),
+                        minHeight: 5,
+                      ),
+                    ),
+                    const SizedBox(height: 12),
+                    SizedBox(
+                      width: double.infinity,
+                      height: 43,
+                      child: OutlinedButton.icon(
+                        onPressed: _showExitConfirmation,
+                        icon: const Icon(Icons.close_rounded, size: 17),
+                        label: const Text(
+                          'Keluar dari Simulasi',
+                          style: TextStyle(
+                            fontSize: 12,
+                            fontWeight: FontWeight.w700,
+                          ),
+                        ),
+                        style: OutlinedButton.styleFrom(
+                          foregroundColor: const Color(0xFF536783),
+                          side: const BorderSide(color: Color(0xFFE0E6EF)),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(13),
+                          ),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
             ),
           ],
         ),
-        const SizedBox(height: 14),
-
-        Text(
-          isFireActive
-              ? 'Kepulan Asap Karbon Monoksida • Merangkak Rendah!'
-              : 'Praktikum Komputer Berjalan Normal',
-          style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 14),
-        ),
-        const SizedBox(height: 6),
-        Text(
-          'Skenario: Korsleting Server Lab Komputer • Animasi 2D',
-          style: TextStyle(color: Colors.white.withValues(alpha: 0.6), fontSize: 11),
-        ),
-      ],
+      ),
     );
   }
 
-  // ================= ANIMASI SKENARIO 3: BANJIR TANGGUL =================
-  Widget _buildBanjirAnimation() {
-    final bool isFloodActive = _currentSeconds >= 14;
+  String _formatTime(int seconds) {
+    final minutes = seconds ~/ 60;
+    final remainingSeconds = seconds % 60;
+    return '${minutes.toString().padLeft(2, '0')}:'
+        '${remainingSeconds.toString().padLeft(2, '0')}';
+  }
 
+  Future<void> _showExitConfirmation() async {
+    final shouldExit = await showDialog<bool>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(20),
+        ),
+        title: const Text(
+          'Keluar dari simulasi?',
+          style: TextStyle(
+            color: Color(0xFF172B4D),
+            fontWeight: FontWeight.w800,
+            fontSize: 17,
+          ),
+        ),
+        content: const Text(
+          'Progres simulasi saat ini mungkin belum selesai. Kamu yakin ingin keluar?',
+          style: TextStyle(fontSize: 13, height: 1.5),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(dialogContext, false),
+            child: const Text('Lanjut Belajar'),
+          ),
+          ElevatedButton(
+            onPressed: () => Navigator.pop(dialogContext, true),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: const Color(0xFF3478F6),
+              foregroundColor: Colors.white,
+            ),
+            child: const Text('Ya, Keluar'),
+          ),
+        ],
+      ),
+    );
+
+    if (shouldExit == true && mounted) {
+      Navigator.pop(context);
+    }
+  }
+
+  Widget _buildAnimatedCanvas() {
     return Column(
       mainAxisAlignment: MainAxisAlignment.center,
-      children: [
-        if (isFloodActive)
-          FadeTransition(
-            opacity: _pulseAnimController,
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: const [
-                Icon(Icons.waves_rounded, color: Colors.lightBlueAccent, size: 24),
-                SizedBox(width: 6),
-                Text(
-                  'DEBIT AIR TANGGUL MELUAP CEPAT',
-                  style: TextStyle(color: Colors.lightBlueAccent, fontWeight: FontWeight.bold, fontSize: 12),
-                ),
-              ],
-            ),
-          ),
-        const SizedBox(height: 14),
-
-        Stack(
-          alignment: Alignment.center,
-          children: [
-            Container(
-              width: 130,
-              height: 130,
-              decoration: BoxDecoration(
-                shape: BoxShape.circle,
-                color: isFloodActive ? Colors.blue.withValues(alpha: 0.2) : Colors.white10,
-              ),
-            ),
-            Icon(
-              isFloodActive ? Icons.tsunami_rounded : Icons.house_rounded,
-              size: 80,
-              color: isFloodActive ? Colors.lightBlueAccent : Colors.white70,
-            ),
-          ],
-        ),
-        const SizedBox(height: 14),
-
-        Text(
-          isFloodActive
-              ? 'Arus Deras Memasuki Rumah • Evakuasi Vertikal!'
-              : 'Hujan Lebat di Kawasan Pemukiman Warga',
-          style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 14),
-        ),
-        const SizedBox(height: 6),
-        Text(
-          'Skenario: Tanggul Jebol & Banjir Bandang • Animasi 2D',
-          style: TextStyle(color: Colors.white.withValues(alpha: 0.6), fontSize: 11),
-        ),
+      children: const [
+        Icon(Icons.apartment_rounded, size: 80, color: Colors.white70),
+        SizedBox(height: 14),
+        Text('Simulasi Interaktif', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
       ],
     );
   }

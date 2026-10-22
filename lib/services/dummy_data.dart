@@ -152,12 +152,12 @@ class DummyData {
 
   // ================= DAFTAR SKENARIO SIMULASI =================
   static const List<SkenarioSimulasi> daftarSkenario = [
-    SkenarioSimulasi(
+SkenarioSimulasi(
       id: 'gempa_kelas',
       judul: 'Skenario 1: Gempa Bumi di Ruang Kelas (Lantai 3)',
       kategori: 'Gempa Bumi',
-      durasi: '60 Detik',
-      totalDetik: 60,
+      durasi: '25 Detik',
+      totalDetik: 25,
       tingkatKesulitan: 'Menengah',
       deskripsi: 'Uji reflek dan pengambilan keputusanmu saat gempa 6.5 SR mengguncang gedung sekolah di lantai atas.',
       warnaHex: 0xFFFF7043,
@@ -167,8 +167,8 @@ class DummyData {
       pesanSelesai: 'Simulasi Selesai! Kamu berhasil selamat sampai di titik kumpul aman lapangan terbuka.',
       checkpoints: [
         SimulasiCheckpoint(
-          detik: 12,
-          judul: 'CHECKPOINT 1 (Detik 00:12)',
+          detik: 11,
+          judul: 'CHECKPOINT 1 (Detik 00:11)',
           narasiSituasi: 'Lantai berguncang sangat hebat! Puing plafon mulai berjatuhan dari atap kelas. Apa tindakan pertama yang kamu ambil?',
           pilihan: [
             PilihanKeputusan(
@@ -183,7 +183,7 @@ class DummyData {
               kode: 'B',
               teks: 'Berlindung di bawah meja kokoh dengan teknik Drop, Cover, Hold On.',
               isAman: true,
-              skorDelta: 35,
+              skorDelta: 50,
               judulFeedback: 'Tindakan Tepat & Sempurna!',
               feedback: 'Luar biasa! Melindungi kepala dan organ vital di bawah meja kokoh adalah standar keselamatan emas saat guncangan aktif.',
             ),
@@ -198,8 +198,8 @@ class DummyData {
           ],
         ),
         SimulasiCheckpoint(
-          detik: 32,
-          judul: 'CHECKPOINT 2 (Detik 00:32)',
+          detik: 18,
+          judul: 'CHECKPOINT 2 (Detik 00:18)',
           narasiSituasi: 'Guncangan gempa mereda sejenak. Kamu harus segera keluar dari gedung lantai 3. Bagaimana caramu turun ke bawah?',
           pilihan: [
             PilihanKeputusan(
@@ -214,7 +214,7 @@ class DummyData {
               kode: 'B',
               teks: 'Lindungi kepala dengan tas, jalan cepat tertib lewat tangga darurat darat.',
               isAman: true,
-              skorDelta: 35,
+              skorDelta: 50,
               judulFeedback: 'Keputusan Tepat!',
               feedback: 'Hebat! Tangga darurat dirancang lebih tahan beban dan melindungi kepala dengan tas meminimalkan benturan material.',
             ),
@@ -225,29 +225,6 @@ class DummyData {
               skorDelta: -20,
               judulFeedback: 'Tindakan Lalai & Membahayakan!',
               feedback: 'Gempa susulan dapat terjadi kapan saja. Menunda evakuasi demi ponsel mengancam keselamatan dirimu dan orang lain.',
-            ),
-          ],
-        ),
-        SimulasiCheckpoint(
-          detik: 50,
-          judul: 'CHECKPOINT 3 (Detik 00:50)',
-          narasiSituasi: 'Kamu sudah berhasil keluar ke pekarangan sekolah. Di mana lokasi berkumpul yang paling aman?',
-          pilihan: [
-            PilihanKeputusan(
-              kode: 'A',
-              teks: 'Berdiri di lapangan terbuka yang jauh dari gedung, tiang, dan kabel listrik.',
-              isAman: true,
-              skorDelta: 30,
-              judulFeedback: 'Titik Kumpul Ideal!',
-              feedback: 'Tepat sekali! Titik kumpul terbuka menjamin keselamatan dari bahaya reruntuhan kaca, dinding runtuh, maupun sengatan kabel putus.',
-            ),
-            PilihanKeputusan(
-              kode: 'B',
-              teks: 'Berteduh persis di bawah kanopi teras pintu masuk gedung.',
-              isAman: false,
-              skorDelta: -20,
-              judulFeedback: 'Lokasi Rawan Runtuh!',
-              feedback: 'Kanopi dan ornamen dinding depan gedung adalah bagian yang paling rentan rontok saat gempa susulan datang.',
             ),
           ],
         ),

@@ -11,41 +11,80 @@ class SplashScreen extends StatefulWidget {
   State<SplashScreen> createState() => _SplashScreenState();
 }
 
-class _SplashScreenState extends State<SplashScreen> with SingleTickerProviderStateMixin {
-  late AnimationController _animController;
+class _SplashScreenState extends State<SplashScreen>
+    with TickerProviderStateMixin {
+  late AnimationController _pulseController;
+  late AnimationController _fadeController;
   late Animation<double> _scaleAnimation;
+  late Animation<double> _fadeAnimation;
   Timer? _timer;
 
   @override
   void initState() {
     super.initState();
-    _animController = AnimationController(
+
+    // 1. Controller Animasi Pulsa Logo
+    _pulseController = AnimationController(
       vsync: this,
       duration: const Duration(milliseconds: 1200),
     )..repeat(reverse: true);
 
-    _scaleAnimation = Tween<double>(begin: 0.92, end: 1.08).animate(
-      CurvedAnimation(parent: _animController, curve: Curves.easeInOut),
+    _scaleAnimation = Tween<double>(
+      begin: 0.95,
+      end: 1.05,
+    ).animate(
+      CurvedAnimation(
+        parent: _pulseController,
+        curve: Curves.easeInOut,
+      ),
     );
 
-    // Cek status sesi login setelah 2.5 detik
-    _timer = Timer(const Duration(milliseconds: 2500), () async {
-      if (!mounted) return;
-      final loggedIn = await StorageService.isLoggedIn();
-      if (!mounted) return;
-      Navigator.pushReplacement(
-        context,
-        MaterialPageRoute(
-          builder: (context) => loggedIn ? const MainNavigation() : const LoginScreen(),
-        ),
-      );
-    });
+    // 2. Controller Fade In Tampilan
+    _fadeController = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 800),
+    );
+
+    _fadeAnimation = CurvedAnimation(
+      parent: _fadeController,
+      curve: Curves.easeIn,
+    );
+
+    _fadeController.forward();
+
+    // 3. Pengecekan Login & Navigasi
+    _timer = Timer(
+      const Duration(milliseconds: 4500),
+      () async {
+        if (!mounted) return;
+
+        final loggedIn = await StorageService.isLoggedIn();
+
+        if (!mounted) return;
+
+        Navigator.pushReplacement(
+          context,
+          PageRouteBuilder(
+            pageBuilder: (context, animation, secondaryAnimation) =>
+                loggedIn ? const MainNavigation() : const LoginScreen(),
+            transitionsBuilder: (context, animation, secondaryAnimation, child) {
+              return FadeTransition(
+                opacity: animation,
+                child: child,
+              );
+            },
+            transitionDuration: const Duration(milliseconds: 500),
+          ),
+        );
+      },
+    );
   }
 
   @override
   void dispose() {
     _timer?.cancel();
-    _animController.dispose();
+    _pulseController.dispose();
+    _fadeController.dispose();
     super.dispose();
   }
 
@@ -54,76 +93,116 @@ class _SplashScreenState extends State<SplashScreen> with SingleTickerProviderSt
     return Scaffold(
       backgroundColor: Colors.white,
       body: SafeArea(
-        child: Center(
-          child: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 32.0),
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                const Spacer(),
-                ScaleTransition(
-                  scale: _scaleAnimation,
-                  child: Container(
-                    width: 104,
-                    height: 104,
-                    decoration: BoxDecoration(
-                      color: const Color(0xFFFFEBEE),
-                      shape: BoxShape.circle,
-                      boxShadow: [
-                        BoxShadow(
-                          color: Colors.redAccent.withValues(alpha: 0.25),
-                          blurRadius: 20,
-                          offset: const Offset(0, 8),
+        child: SizedBox.expand(
+          child: FadeTransition(
+            opacity: _fadeAnimation,
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 28),
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                crossAxisAlignment: CrossAxisAlignment.center,
+                children: [
+                  const Spacer(flex: 2),
+
+                  // =========================
+                  // LOGO DISASTER-X (PULSING)
+                  // =========================
+                  ScaleTransition(
+                    scale: _scaleAnimation,
+                    child: Image.asset(
+                      'assets/images/disasterlogo.png',
+                      width: 250,
+                      fit: BoxFit.contain,
+                      errorBuilder: (context, error, stackTrace) {
+                        debugPrint("Gagal memuat gambar logo: $error");
+
+                        // Tampilan cadangan jika aset gambar tidak ditemukan
+                        return const Column(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Icon(
+                              Icons.shield_outlined,
+                              size: 90,
+                              color: Colors.redAccent,
+                            ),
+                            SizedBox(height: 12),
+                            Text(
+                              'DISASTER-X',
+                              style: TextStyle(
+                                fontSize: 26,
+                                fontWeight: FontWeight.bold,
+                                color: Color(0xFF17375E),
+                                letterSpacing: 1.2,
+                              ),
+                            ),
+                          ],
+                        );
+                      },
+                    ),
+                  ),
+
+                  const SizedBox(height: 28),
+
+                  // =========================
+                  // DESKRIPSI SINGKAT
+                  // =========================
+                  const Text(
+                    'Interactive Disaster Preparedness',
+                    textAlign: TextAlign.center,
+                    style: TextStyle(
+                      fontSize: 14,
+                      fontWeight: FontWeight.bold,
+                      color: Color(0xFF17375E),
+                      letterSpacing: 0.3,
+                    ),
+                  ),
+
+                  const SizedBox(height: 8),
+
+                  const Text(
+                    'Belajar, simulasikan, dan tingkatkan\n'
+                    'kesiapsiagaan menghadapi bencana.',
+                    textAlign: TextAlign.center,
+                    style: TextStyle(
+                      fontSize: 12,
+                      height: 1.5,
+                      color: Colors.grey,
+                    ),
+                  ),
+
+                  const Spacer(flex: 2),
+
+                  // =========================
+                  // LOADING BAR & TEKS
+                  // =========================
+                  SizedBox(
+                    width: 180,
+                    child: ClipRRect(
+                      borderRadius: BorderRadius.circular(10),
+                      child: const LinearProgressIndicator(
+                        minHeight: 5,
+                        backgroundColor: Color(0xFFFFEBEE),
+                        valueColor: AlwaysStoppedAnimation<Color>(
+                          Colors.redAccent,
                         ),
-                      ],
-                    ),
-                    child: const Icon(
-                      Icons.warning_amber_rounded,
-                      size: 58,
-                      color: Colors.redAccent,
+                      ),
                     ),
                   ),
-                ),
-                const SizedBox(height: 24),
-                const Text(
-                  'DISASTER-X',
-                  style: TextStyle(
-                    fontSize: 28,
-                    fontWeight: FontWeight.bold,
-                    letterSpacing: 2.5,
-                    color: Colors.black87,
-                  ),
-                ),
-                const SizedBox(height: 8),
-                const Text(
-                  'Digital Interactive Simulation\nfor Adaptive Emergency Response',
-                  textAlign: TextAlign.center,
-                  style: TextStyle(
-                    fontSize: 13,
-                    height: 1.4,
-                    color: Colors.grey,
-                    fontWeight: FontWeight.w500,
-                  ),
-                ),
-                const Spacer(),
-                SizedBox(
-                  width: 180,
-                  child: ClipRRect(
-                    borderRadius: BorderRadius.circular(10),
-                    child: const LinearProgressIndicator(
-                      minHeight: 6,
-                      backgroundColor: Color(0xFFEEEEEE),
-                      valueColor: AlwaysStoppedAnimation<Color>(Colors.redAccent),
+
+                  const SizedBox(height: 12),
+
+                  const Text(
+                    'Memuat data simulasi & modul...',
+                    style: TextStyle(
+                      fontSize: 11,
+                      color: Colors.grey,
+                      fontWeight: FontWeight.w500,
                     ),
                   ),
-                ),
-                const SizedBox(height: 12),
-                const Text(
-                  'Memuat data simulasi & modul...',
-                  style: TextStyle(fontSize: 11, color: Colors.grey),
-                ),
-                const SizedBox(height: 32),
-              ],
+
+                  const SizedBox(height: 28),
+                ],
+              ),
             ),
           ),
         ),
